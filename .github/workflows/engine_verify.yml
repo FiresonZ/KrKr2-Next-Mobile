@@ -29,7 +29,7 @@ jobs:
         # bison: 生成 TJS2 parser；mesa-common-dev: ANGLE Linux 端口需要的 GL 头
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build ccache bison mesa-common-dev
+          sudo apt-get install -y cmake ninja-build ccache bison mesa-common-dev nasm
           cmake --version | head -1
           ninja --version
           bison --version | head -1
