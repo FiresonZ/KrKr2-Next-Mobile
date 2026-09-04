@@ -27,9 +27,12 @@ jobs:
 
       - name: Install build dependencies
         # bison: 生成 TJS2 parser；mesa-common-dev: ANGLE Linux 端口需要的 GL 头
+        # yasm: vcpkg ffmpeg 3.3.9 在 x86_64 下优先用 yasm（configure 先查 yasm 再退回 nasm）
+        #       apt 的 nasm 2.15 生成的 .d 依赖会把 %include 写成裸文件名，导致
+        #       "No rule to make target 'vp9itxfm_template.asm'"；yasm 则生成正确路径。
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build ccache bison mesa-common-dev nasm
+          sudo apt-get install -y cmake ninja-build ccache bison mesa-common-dev nasm yasm
           cmake --version | head -1
           ninja --version
           bison --version | head -1
