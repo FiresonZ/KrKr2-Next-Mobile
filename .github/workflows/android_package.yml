@@ -86,6 +86,8 @@ jobs:
         run: |
           export VCPKG_BINARY_SOURCES="files,${HOME}/.cache/vcpkg,readwrite"
           export CCACHE_DIR="${HOME}/.cache/ccache"
+          # 兜底：Windows 上传/zip 解压易丢失执行位，先确保 build.sh 可执行
+          chmod +x build.sh
           ./build.sh android "$BUILD_TYPE"
 
       - name: Package APK
