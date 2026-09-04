@@ -7,10 +7,7 @@ name: 引擎核心验证 (Linux)
 # 常规改动 5-10 分钟出结果，且与 iOS/Android 的 SIMD 结论等价（公式缺陷与指令集无关）。
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-  workflow_dispatch:
+  workflow_dispatch:   # 仅允许手动触发
 
 concurrency:
   group: engine-verify
