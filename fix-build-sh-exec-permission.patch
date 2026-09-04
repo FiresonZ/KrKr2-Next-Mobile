@@ -1,0 +1,25 @@
+From fad62b84fc26a39925c0b0beee8bc77d2a105aa7 Mon Sep 17 00:00:00 2001
+From: FiresonZ <dev@gith.uk>
+Date: Fri, 4 Sep 2026 17:43:46 +0000
+Subject: [PATCH] =?UTF-8?q?fix:=20=E4=B8=BA=20build.sh=20=E6=B7=BB?=
+ =?UTF-8?q?=E5=8A=A0=E5=8F=AF=E6=89=A7=E8=A1=8C=E6=9D=83=E9=99=90=EF=BC=8C?=
+ =?UTF-8?q?=E4=BF=AE=E5=A4=8D=20CI=20=E8=B0=83=E7=94=A8=20./build.sh=20?=
+ =?UTF-8?q?=E6=8A=A5=20Permission=20denied?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+git 记录的 build.sh 模式为 100644（无执行位），而 ios/android_package.yml
+均以 ./build.sh 直接调用，导致 CI 首次运行即失败。chmod +x 后模式变更为
+100755，一处修复同时解决 iOS/Android CI 与本地 ./build.sh 用法。
+---
+ build.sh | 0
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+ mode change 100644 => 100755 build.sh
+
+diff --git a/build.sh b/build.sh
+old mode 100644
+new mode 100755
+-- 
+2.43.0
+
