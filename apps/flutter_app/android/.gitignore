@@ -1,0 +1,14 @@
+gradle-wrapper.jar
+/.gradle
+/captures/
+gradlew
+gradlew.bat
+local.properties
+GeneratedPluginRegistrant.java
+
+# Engine shared library — copied by build/build_android.sh
+/app/src/main/jniLibs/
+
+# Signing
+key.properties
+*.jks

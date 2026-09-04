@@ -1,0 +1,88 @@
+name: 引擎核心验证 (Linux)
+
+# 在 Ubuntu runner 上以宿主构建（非交叉编译）验证 C++ 引擎核心：
+#   - 编译全部引擎库（engine_api SHARED + core + plugins + tools）
+#   - 后续可挂 catch2 单元测试（tests/ 目录）与 SIMD on/off 逐像素比对
+# 反馈最快：Linux 宿主构建无 NDK/Xcode 开销，配合 vcpkg 二进制缓存 + ccache，
+# 常规改动 5-10 分钟出结果，且与 iOS/Android 的 SIMD 结论等价（公式缺陷与指令集无关）。
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: engine-verify
+  cancel-in-progress: true
+
+jobs:
+  verify-linux:
+    name: Build engine core + smoke test
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    env:
+      JOBS: 4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        # bison: 生成 TJS2 parser；mesa-common-dev: ANGLE Linux 端口需要的 GL 头
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build ccache bison mesa-common-dev
+          cmake --version | head -1
+          ninja --version
+          bison --version | head -1
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-linux-core-${{ github.ref }}
+          restore-keys: |
+            ccache-linux-core-
+
+      - name: Cache vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vcpkg
+          key: vcpkg-linux-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
+          restore-keys: |
+            vcpkg-linux-
+
+      - name: Configure + build engine core (Linux host)
+        run: |
+          export VCPKG_BINARY_SOURCES="files,${HOME}/.cache/vcpkg,readwrite"
+          export CCACHE_DIR="${HOME}/.cache/ccache"
+          # vcpkg 自举（与 build/*.sh 相同的路径约定）
+          if [ ! -d ".devtools/vcpkg/.git" ]; then
+            git clone https://github.com/microsoft/vcpkg.git .devtools/vcpkg
+            (cd .devtools/vcpkg && ./bootstrap-vcpkg.sh -disableMetrics)
+          fi
+          export VCPKG_ROOT="$PWD/.devtools/vcpkg"
+          cmake --preset "Linux Debug Config"
+          cmake --build --preset "Linux Debug Build" -- -j"$JOBS"
+
+      - name: Run tests (ctest, if any)
+        run: |
+          if [ -d "out/linux/debug/tests" ]; then
+            (cd out/linux/debug && ctest --output-on-failure)
+          else
+            echo "No tests yet — build succeeded."
+          fi
+
+      - name: Smoke test tools/xp3
+        run: |
+          XP3_BIN="out/linux/debug/tools/xp3/xp3"
+          if [ -x "$XP3_BIN" ]; then
+            "$XP3_BIN" --help >/dev/null 2>&1 && echo "tools/xp3 smoke test OK"
+          else
+            echo "tools/xp3 not built — skipping"
+          fi
+
+      - name: Report engine_api artifact
+        run: |
+          ls -lh out/linux/debug/bridge/engine_api/ || true

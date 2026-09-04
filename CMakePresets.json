@@ -1,0 +1,182 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "MacOS Config",
+      "generator": "Ninja",
+      "hidden": true,
+      "cacheVariables": {
+        "MACOS": true,
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "MacOS Debug Config",
+      "inherits": "MacOS Config",
+      "binaryDir": "${sourceDir}/out/macos/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "MacOS Release Config",
+      "inherits": "MacOS Config",
+      "binaryDir": "${sourceDir}/out/macos/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "iOS Config",
+      "generator": "Ninja",
+      "hidden": true,
+      "cacheVariables": {
+        "IOS": true,
+        "CMAKE_SYSTEM_NAME": "iOS",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "15.0",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "VCPKG_TARGET_TRIPLET": "arm64-ios",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/vcpkg/triplets",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "BUILD_TOOLS": false,
+        "ENABLE_TESTS": false
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "iOS Debug Config",
+      "inherits": "iOS Config",
+      "binaryDir": "${sourceDir}/out/ios/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "iOS Release Config",
+      "inherits": "iOS Config",
+      "binaryDir": "${sourceDir}/out/ios/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "Android Config",
+      "generator": "Ninja",
+      "hidden": true,
+      "cacheVariables": {
+        "ANDROID": true,
+        "CMAKE_SYSTEM_NAME": "Android",
+        "CMAKE_ANDROID_ARCH_ABI": "arm64-v8a",
+        "CMAKE_ANDROID_API": "24",
+        "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK_HOME}",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "VCPKG_TARGET_TRIPLET": "arm64-android",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/vcpkg/triplets",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "BUILD_TOOLS": false,
+        "ENABLE_TESTS": false
+      }
+    },
+    {
+      "name": "Android Debug Config",
+      "inherits": "Android Config",
+      "binaryDir": "${sourceDir}/out/android/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "Android Release Config",
+      "inherits": "Android Config",
+      "binaryDir": "${sourceDir}/out/android/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "Linux Config",
+      "generator": "Ninja",
+      "hidden": true,
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "BUILD_TOOLS": true,
+        "ENABLE_TESTS": true
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "Linux Debug Config",
+      "inherits": "Linux Config",
+      "binaryDir": "${sourceDir}/out/linux/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "Linux Release Config",
+      "inherits": "Linux Config",
+      "binaryDir": "${sourceDir}/out/linux/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "MacOS Debug Build",
+      "configurePreset": "MacOS Debug Config"
+    },
+    {
+      "name": "MacOS Release Build",
+      "configurePreset": "MacOS Release Config"
+    },
+    {
+      "name": "iOS Debug Build",
+      "configurePreset": "iOS Debug Config"
+    },
+    {
+      "name": "iOS Release Build",
+      "configurePreset": "iOS Release Config"
+    },
+    {
+      "name": "Android Debug Build",
+      "configurePreset": "Android Debug Config"
+    },
+    {
+      "name": "Android Release Build",
+      "configurePreset": "Android Release Config"
+    },
+    {
+      "name": "Linux Debug Build",
+      "configurePreset": "Linux Debug Config"
+    },
+    {
+      "name": "Linux Release Build",
+      "configurePreset": "Linux Release Config"
+    }
+  ]
+}

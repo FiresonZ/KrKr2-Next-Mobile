@@ -1,0 +1,115 @@
+name: Android 打包
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型（debug / release）'
+        type: choice
+        default: release
+        options:
+          - release
+          - debug
+  push:
+    tags:
+      - 'v*'
+
+# 只保留最新一次运行的产物（避免并发互相覆盖缓存）
+concurrency:
+  group: android-package
+  cancel-in-progress: true
+
+jobs:
+  build-android:
+    name: Build Android (${{ inputs.build_type != '' && inputs.build_type || 'release' }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+    env:
+      BUILD_TYPE: ${{ inputs.build_type != '' && inputs.build_type || 'release' }}
+      # 并行构建数
+      JOBS: 4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Java
+        # AGP 8.x requires JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build ccache
+          flutter --version
+          cmake --version | head -1
+          ninja --version
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.ref }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+
+      - name: Install Android NDK
+        run: |
+          if [ -d "$ANDROID_HOME/ndk" ] && [ -n "$(ls -A "$ANDROID_HOME/ndk" 2>/dev/null)" ]; then
+            echo "NDK already present under $ANDROID_HOME/ndk"
+          else
+            yes | sdkmanager --licenses >/dev/null 2>&1 || true
+            sdkmanager --install "ndk;27.0.12077973"
+          fi
+          echo "ANDROID_NDK_HOME=$(ls -1d "$ANDROID_HOME"/ndk/* | sort -V | tail -n 1)" >> "$GITHUB_ENV"
+          echo "NDK root: $ANDROID_NDK_HOME"
+
+      - name: Cache vcpkg binary cache
+        # vcpkg 二进制缓存：首次全量编译后，后续运行秒级还原依赖
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vcpkg
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+
+      - name: Build C++ engine + Flutter Android app
+        run: |
+          export VCPKG_BINARY_SOURCES="files,${HOME}/.cache/vcpkg,readwrite"
+          export CCACHE_DIR="${HOME}/.cache/ccache"
+          ./build.sh android "$BUILD_TYPE"
+
+      - name: Package APK
+        run: |
+          if [ "$BUILD_TYPE" = "debug" ]; then
+            APK="apps/flutter_app/build/app/outputs/flutter-apk/app-debug.apk"
+          else
+            APK="apps/flutter_app/build/app/outputs/flutter-apk/app-release.apk"
+          fi
+          if [ ! -f "$APK" ]; then
+            echo "::error::APK not found under $APK"
+            find apps/flutter_app/build -name "*.apk" 2>/dev/null || true
+            exit 1
+          fi
+          ZIP="KrKr2-Next-Android-${BUILD_TYPE}.apk"
+          cp "$APK" "$ZIP"
+          echo "已生成: $ZIP"
+          ls -lh "$ZIP"
+          echo "artifact=$ZIP" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KrKr2-Next-Android-${{ env.BUILD_TYPE }}
+          path: ${{ env.artifact }}
+          if-no-files-found: error
+          retention-days: 14

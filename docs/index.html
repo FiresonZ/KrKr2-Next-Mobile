@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KrKr2 Next — 面向移动端的 KiriKiri2 运行环境</title>
+  <meta name="description" content="KrKr2 Next：基于 Flutter 与 ANGLE(Metal/Vulkan) 重构的 KiriKiri2 视觉小说引擎运行环境，专注移动端 iOS + Android（macOS 开发目标）。">
+  <style>
+    :root {
+      --bg: #0f1117;
+      --bg-soft: #171a23;
+      --card: #1c2029;
+      --border: #2a2f3b;
+      --text: #e6e8ee;
+      --muted: #9aa3b2;
+      --accent: #5ea8ff;
+      --accent-2: #8f7bff;
+      --ok: #4ade80;
+      --wip: #fbbf24;
+      --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 0 24px; }
+
+    /* ---------- hero ---------- */
+    header {
+      padding: 96px 0 56px;
+      text-align: center;
+      background:
+        radial-gradient(900px 380px at 50% -80px, rgba(94,168,255,.18), transparent 70%),
+        radial-gradient(700px 320px at 85% 0%, rgba(143,123,255,.12), transparent 70%);
+    }
+    .logo {
+      display: inline-flex; align-items: center; gap: 12px;
+      font-weight: 800; font-size: 40px; letter-spacing: -.5px;
+    }
+    .logo .dot { color: var(--accent); }
+    .tagline { margin-top: 14px; font-size: 17px; color: var(--muted); }
+    .badges { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .badge {
+      font-size: 12.5px; padding: 4px 12px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--card); color: var(--muted);
+    }
+    .badge i { color: var(--accent); font-style: normal; }
+    .cta { margin-top: 32px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block; padding: 11px 22px; border-radius: 10px;
+      font-weight: 600; text-decoration: none; font-size: 14.5px; transition: transform .15s ease, opacity .15s;
+    }
+    .btn:hover { transform: translateY(-1px); opacity: .9; }
+    .btn-primary { background: var(--accent); color: #0b0e14; }
+    .btn-ghost { border: 1px solid var(--border); color: var(--text); background: var(--bg-soft); }
+
+    /* ---------- sections ---------- */
+    section { padding: 48px 0; }
+    h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .sub { color: var(--muted); font-size: 14px; margin-bottom: 26px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+    }
+    .card h3 { font-size: 16px; margin-bottom: 8px; }
+    .card p { color: var(--muted); font-size: 13.5px; }
+    .card .ico { font-size: 20px; margin-bottom: 10px; display: block; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+    .s-ok { color: var(--ok); }
+    .s-wip { color: var(--wip); }
+
+    pre {
+      background: #0b0d13; border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 18px; font-family: var(--mono); font-size: 13px; overflow-x: auto;
+    }
+    pre .cmt { color: #5c6472; }
+    code.inline {
+      background: var(--card); border: 1px solid var(--border); border-radius: 5px;
+      padding: 1px 6px; font-family: var(--mono); font-size: 12.5px; color: var(--accent);
+    }
+
+    .links { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .link-card {
+      display: block; text-decoration: none; color: var(--text);
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+      transition: border-color .15s, transform .15s;
+    }
+    .link-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .link-card .t { font-weight: 600; font-size: 14px; }
+    .link-card .d { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+
+    footer { padding: 40px 0 56px; color: var(--muted); font-size: 13px; text-align: center; }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 560px) {
+      header { padding: 72px 0 40px; }
+      .logo { font-size: 30px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="logo"><span class="dot">◆</span> KrKr2 Next</div>
+    <p class="tagline">面向移动端的 KiriKiri2（吉里吉里2）视觉小说引擎运行环境 · C++ 引擎 + Flutter 壳</p>
+    <div class="badges">
+      <span class="badge"><i>●</i> In Development</span>
+      <span class="badge"><i>●</i> iOS · Android · macOS</span>
+      <span class="badge"><i>●</i> KiriKiri2</span>
+      <span class="badge"><i>●</i> Flutter</span>
+      <span class="badge"><i>●</i> ANGLE (Metal · Vulkan)</span>
+      <span class="badge"><i>●</i> GPL-3.0</span>
+    </div>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/reAAAq/KrKr2-Next" target="_blank" rel="noopener">直接上游</a>
+      <a class="btn btn-ghost" href="https://github.com/FiresonZ/KrKr2-Next-Mobile#readme" target="_blank" rel="noopener">README</a>
+      <a class="btn btn-ghost" href="https://github.com/FiresonZ/KrKr2-Next-Mobile/tree/main/docs/dev" target="_blank" rel="noopener">开发文档</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="about">
+    <h2>关于本项目</h2>
+    <p class="sub">基于上游 krkr2 重构的独立项目，专注移动端（iOS + Android）。</p>
+    <div class="cards">
+      <div class="card">
+        <span class="ico">🎮</span>
+        <h3>原生兼容</h3>
+        <p>完全兼容原版 KiriKiri2 游戏脚本，内置高精度 TJS2 解析器，支持 PSB 动画与 Live2D Cubism 扩展。</p>
+      </div>
+      <div class="card">
+        <span class="ico">⚡</span>
+        <h3>零拷贝渲染</h3>
+        <p>ANGLE 离屏渲染（iOS/macOS Metal 后端、Android Vulkan 后端），经 IOSurface / SurfaceTexture 零拷贝直达 Flutter 纹理，低功耗告别卡顿。</p>
+      </div>
+      <div class="card">
+        <span class="ico">📱</span>
+        <h3>移动优先</h3>
+        <p>iOS 与 Android 为主目标，macOS 保留为 Apple 开发/调试平台。无 Mac 也能在 Windows 上构建 Android APK。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="platform">
+    <h2>平台支持</h2>
+    <p class="sub">引擎以不同二进制形态接入 Flutter 壳。</p>
+    <table>
+      <thead>
+        <tr><th>平台</th><th>状态</th><th>图形后端</th><th>纹理共享</th><th>引擎形态</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>iOS</td>
+          <td class="s-wip">🚧 主目标 · 开发中</td>
+          <td>Metal</td>
+          <td>IOSurface</td>
+          <td>静态库链接进 Runner</td>
+        </tr>
+        <tr>
+          <td>Android</td>
+          <td class="s-wip">🚧 主目标 · 开发中</td>
+          <td>Vulkan</td>
+          <td>SurfaceTexture</td>
+          <td>libengine_api.so 打包进 APK</td>
+        </tr>
+        <tr>
+          <td>macOS</td>
+          <td class="s-ok">✅ 开发目标</td>
+          <td>Metal</td>
+          <td>IOSurface</td>
+          <td>dylib 打包进 Frameworks</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="build">
+    <h2>快速开始</h2>
+    <p class="sub">iOS 在 macOS 上构建；Android 可在 Windows / macOS / Linux 上构建（需 NDK）。</p>
+    <pre><code>$ ./build.sh ios release     <span class="cmt"># 构建 iOS（macOS + Xcode）</span>
+$ ./build.sh android debug   <span class="cmt"># 构建 Android APK（任意主机）</span>
+$ ./build.sh macos debug     <span class="cmt"># 构建 macOS（开发）</span></code></pre>
+  </section>
+
+  <section id="links">
+    <h2>相关链接</h2>
+    <p class="sub">文档与源码入口。</p>
+    <div class="links">
+      <a class="link-card" href="https://github.com/FiresonZ/KrKr2-Next-Mobile#readme" target="_blank" rel="noopener">
+        <span class="t">📘 README</span>
+        <span class="d">项目简介、架构、平台与进度（本 fork）</span>
+      </a>
+      <a class="link-card" href="https://github.com/FiresonZ/KrKr2-Next-Mobile/tree/main/docs/dev" target="_blank" rel="noopener">
+        <span class="t">🧭 开发文档</span>
+        <span class="d">技术栈 / 架构 / 关键引用 / 构建 / 约定陷阱（AI Agent 速查）</span>
+      </a>
+      <a class="link-card" href="https://github.com/reAAAq/KrKr2-Next" target="_blank" rel="noopener">
+        <span class="t">⬆ 直接上游</span>
+        <span class="d">KrKr2-Next · 本 fork 的来源</span>
+      </a>
+      <a class="link-card" href="https://github.com/2468785842/krkr2" target="_blank" rel="noopener">
+        <span class="t">⬆ 代码来源</span>
+        <span class="d">krkr2 · KrKr2-Next 的源代码重构基础</span>
+      </a>
+      <a class="link-card" href="https://github.com/FiresonZ/KrKr2-Next-Mobile/blob/main/LICENSE" target="_blank" rel="noopener">
+        <span class="t">📄 许可证</span>
+        <span class="d">GNU General Public License v3.0</span>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    KrKr2 Next Mobile · fork 自 <a href="https://github.com/reAAAq/KrKr2-Next" target="_blank" rel="noopener">KrKr2-Next</a>，
+    其基于 <a href="https://github.com/2468785842/krkr2" target="_blank" rel="noopener">krkr2</a> 源代码重构 ·
+    以 <a href="https://github.com/FiresonZ/KrKr2-Next-Mobile/blob/main/LICENSE" target="_blank" rel="noopener">GPL-3.0</a> 协议开源
+  </div>
+</footer>
+
+</body>
+</html>

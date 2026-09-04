@@ -1,0 +1,91 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "krkr2",
+  "version-string": "1.5.0",
+  "dependencies": [
+    "7zip",
+    {
+      "name": "argparse",
+      "platform": "osx | linux"
+    },
+    "boost-iostreams",
+    {
+      "name": "boost-locale",
+      "default-features": false
+    },
+    "boost-phoenix",
+    "boost-spirit",
+    {
+      "name": "catch2",
+      "default-features": false,
+      "platform": "!ios & !android"
+    },
+    "minizip",
+    "tinyxml2",
+    {
+      "name": "angle",
+      "default-features": false,
+      "features": [
+        "metal"
+      ],
+      "platform": "osx | ios"
+    },
+    {
+      "name": "angle",
+      "default-features": false,
+      "features": [
+        "vulkan"
+      ],
+      "platform": "android | linux"
+    },
+    "ffmpeg",
+    "fmt",
+    "jxrlib",
+    "libarchive",
+    "libxml2",
+    "libgdiplus",
+    "libjpeg-turbo",
+    {
+      "name": "libpng",
+      "platform": "osx | ios | android"
+    },
+    "libvorbis",
+    "libwebp",
+    "lz4",
+    "oniguruma",
+    "openal-soft",
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": [
+        {
+          "name": "openmp",
+          "platform": "!ios"
+        }
+      ]
+    },
+    {
+      "name": "opusfile",
+      "default-features": false
+    },
+    {
+      "name": "sdl2",
+      "default-features": false
+    },
+    "spdlog",
+    "highway",
+    "uchardet",
+    "unrar",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    "zstd"
+  ],
+  "overrides": [
+    {
+      "name": "opencv4",
+      "version": "4.7.0#6"
+    }
+  ]
+}

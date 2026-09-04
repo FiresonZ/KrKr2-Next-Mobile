@@ -1,0 +1,96 @@
+name: iOS 打包
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型（debug / release）'
+        type: choice
+        default: release
+        options:
+          - release
+          - debug
+  push:
+    tags:
+      - 'v*'
+
+# 只保留最新一次运行的产物（避免并发互相覆盖缓存）
+concurrency:
+  group: ios-package
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    name: Build iOS (${{ inputs.build_type != '' && inputs.build_type || 'release' }})
+    runs-on: macos-15
+    timeout-minutes: 240
+    env:
+      BUILD_TYPE: ${{ inputs.build_type != '' && inputs.build_type || 'release' }}
+      # 并行构建数
+      JOBS: 4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install build dependencies
+        # Xcode / CocoaPods / Python 已预装；cmake ninja 幂等安装；bison 用于生成 TJS2 parser
+        # autoconf/automake/autoconf-archive/libtool/gettext/pkg-config：
+        #   vcpkg 交叉编译 iOS 时需构建宿主工具（gperf→glib、libexif 等 autotools 端口）
+        # ccache：引擎 C++ 源码增量编译缓存（vcpkg 依赖缓存走下方的 vcpkg 二进制缓存）
+        run: |
+          brew install cmake ninja bison autoconf automake autoconf-archive libtool gettext pkg-config ccache
+          flutter --version
+          cmake --version | head -1
+          ninja --version
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.ref }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+
+      - name: Cache vcpkg binary cache
+        # vcpkg 二进制缓存：首次全量编译后，后续运行秒级还原依赖
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vcpkg
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+
+      - name: Build C++ engine + Flutter iOS app
+        run: |
+          export VCPKG_BINARY_SOURCES="files,${HOME}/.cache/vcpkg,readwrite"
+          export CCACHE_DIR="${HOME}/.cache/ccache"
+          ./build.sh ios "$BUILD_TYPE"
+
+      - name: Package .app
+        run: |
+          APP="apps/flutter_app/build/ios/iphoneos/Runner.app"
+          if [ ! -d "$APP" ]; then
+            echo "::error::Runner.app not found under $APP"
+            find apps/flutter_app/build/ios -maxdepth 3 -name "*.app" 2>/dev/null || true
+            exit 1
+          fi
+          ZIP="KrKr2-Next-iOS-${BUILD_TYPE}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+          echo "已生成: $ZIP"
+          ls -lh "$ZIP"
+          echo "artifact=$ZIP" >> "$GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KrKr2-Next-iOS-${{ env.BUILD_TYPE }}
+          path: ${{ env.artifact }}
+          if-no-files-found: error
+          retention-days: 14
