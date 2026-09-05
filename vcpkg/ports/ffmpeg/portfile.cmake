@@ -28,12 +28,13 @@ if(VCPKG_TARGET_IS_MINGW)
         string(APPEND OPTIONS " --target-os=mingw64")
     endif()
 elseif(VCPKG_TARGET_IS_LINUX)
-    # --disable-asm：ffmpeg 3.3.9 的手写 x86 汇编对全局表用非 PIC 的 R_X86_64_PC32
-    # 重定位，无法链进本工程在 Linux 上编成的共享库 libengine_api.so
-    # （"can not be used when making a shared object"）。--disable-yasm 在这个老版本
-    # 无法真正关掉 x86 asm，故改用 --disable-asm 一次性禁用全部汇编（内联+外部），
-    # 配合 --enable-pic 走纯 C。仅宿主验证受影响，arm64 目标（iOS/Android/macOS）无此问题。
-    string(APPEND OPTIONS " --target-os=linux --enable-pthreads --disable-asm")
+    # ffmpeg 3.3.9 的 x86 汇编对全局表用非 PIC 的 R_X86_64_PC32 重定位，无法链进本工程
+    # 在 Linux 上编成的共享库 libengine_api.so。经验证 --disable-asm / --disable-yasm
+    # 单独用都不彻底（外部 .asm 与 C 内联汇编两类都要禁），故同时加：
+    #   --disable-yasm          去掉外部 .asm（h264_intrapred 等）
+    #   --disable-inline-asm    去掉 C 内联汇编（vc1dsp_mmx/cavsdsp 等）
+    # 配合 --enable-pic 走纯 C。仅宿主验证受影响；arm64 目标（iOS/Android/macOS）无此问题。
+    string(APPEND OPTIONS " --target-os=linux --enable-pthreads --disable-yasm --disable-inline-asm")
 elseif(VCPKG_TARGET_IS_UWP)
     string(APPEND OPTIONS " --target-os=win32 --enable-w32threads --enable-d3d11va")
 elseif(VCPKG_TARGET_IS_WINDOWS)
