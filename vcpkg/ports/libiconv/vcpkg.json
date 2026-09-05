@@ -1,6 +1,6 @@
 {
   "name": "libiconv",
-  "version": "1.19",
+  "version": "1.18",
   "port-version": 2,
   "description": [
     "iconv() text conversion.",

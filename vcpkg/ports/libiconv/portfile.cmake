@@ -1,4 +1,4 @@
-# Overlay libiconv 端口（照搬 vcpkg 上游 1.19，Android 分支改为强制 aarch64）。
+# Overlay libiconv 端口（版本与 SHA512 对齐项目 baseline 的 1.18，Android 分支改为强制 aarch64）。
 #
 # 背景：vcpkg 原厂 libiconv 在 Android(API<28) 用 vcpkg_make(autotools) 构建，
 # 编译器/CFLAGS 取自 get_cmake_vars，而 get_vars 会把目标错推到
