@@ -61,6 +61,8 @@ jobs:
           key: ccache-${{ runner.os }}-${{ github.ref }}
           restore-keys: |
             ccache-${{ runner.os }}-
+          # job 失败时也保存缓存，避免修复编译错误期间反复全量重编
+          save-always: true
 
       - name: Install Android NDK
         run: |
@@ -81,6 +83,8 @@ jobs:
           key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-
+          # job 失败时也保存（vcpkg 按包增量写入，已编译完的包仍然有效），避免每次全量重装
+          save-always: true
 
       - name: Build C++ engine + Flutter Android app
         run: |
