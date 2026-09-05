@@ -58,7 +58,7 @@ cmake --preset "Linux Debug Config" && cmake --build --preset "Linux Debug Build
 | Linux 引擎核心验证 CI（engine_verify.yml） | ✅ 首次绿灯（新增 Linux 宿主平台实现 platform_linux.cpp 等 11 项修复） |
 | SIMD 公式缺陷修复 | ⚠️ 已回退保正确，修复列为待办：tests/tvpgl_simd_compare 逐像素比对证实 23 处 SIMD≠标量；PS 全系混合 / SubBlend_o / ScreenBlend 现指回 `*_c` 标量（`tvpgl_simd_init.cpp` 已注释对应注册），待逐模式修到与标量位级一致后放回 |
 | 构建提速 | ✅ 已删 bullet3、catch2 移动端，CI 加 ccache |
-| 测试基建 | ✅ 已建 SIMD 比对测试 tests/tvpgl_simd_compare（标量 `*_c` vs SIMD `_hwy`，挂 ctest）；已证实并定位 23 处分歧 |
+| 测试基建 | ✅ 已建 SIMD 比对测试 tests/tvpgl_simd_compare（**生产标量**＝TVPGL_C_Init 派发 vs SIMD 派发，挂 ctest）；已证实并定位 23 处 SIMD≠标量，现回退后全绿 |
 
 ## 建议的下一步
 
