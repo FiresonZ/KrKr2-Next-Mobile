@@ -53,7 +53,10 @@ void krkr_GetSurfaceDimensions(uint32_t*, uint32_t*);
 int TVPDrawSceneOnce(int interval);
 
 extern "C" void TVPRegisterKrkrGLESPluginAnchor();
+#ifdef KRKR2_LIVE2D
+// krkrlive2d.cpp 仅在 cubism SDK 存在时编译；缺失时不应引用其锚点，否则链接期未定义。
 extern "C" void TVPRegisterKrkrLive2DPluginAnchor();
+#endif
 
 struct engine_handle_s {
   std::recursive_mutex mutex;
@@ -198,7 +201,9 @@ void InstallCrashSignalHandlers() {
 
 void EnsureInternalPluginAnchorsLinked() {
   TVPRegisterKrkrGLESPluginAnchor();
+#ifdef KRKR2_LIVE2D
   TVPRegisterKrkrLive2DPluginAnchor();
+#endif
 }
 
 void EnsureRuntimeLoggersInitialized() {

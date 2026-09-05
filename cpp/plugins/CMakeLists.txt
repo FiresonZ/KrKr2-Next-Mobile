@@ -117,6 +117,10 @@ if(CUBISM_FW_SOURCES AND CUBISM_CORE_LIB AND EXISTS "${CUBISM_CORE_LIB}")
         ${CUBISM_CORE_DIR}/include
     )
     target_compile_definitions(${PROJECT_NAME} PUBLIC CSM_TARGET_ANGLE_ES2)
+    # 显式“Live2D 已启用”信号：cubism 缺失时（CI/缺 SDK/被 gitignore）krkrlive2d.cpp
+    # 不参与编译，其余引用侧（engine_api / krkrgles）需以此宏保护对
+    # TVPRegisterKrkrLive2DPluginAnchor / g_live2dRenderTarget 的引用，避免链接期未定义符号。
+    target_compile_definitions(${PROJECT_NAME} PUBLIC KRKR2_LIVE2D)
 else()
     # SDK absent on disk (gitignored) — stub the target so downstream links work
     add_library(CubismFramework INTERFACE)
