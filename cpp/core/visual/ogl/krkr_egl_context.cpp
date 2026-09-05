@@ -12,13 +12,23 @@
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
-// IOSurface 在 macOS 与 iOS 上都是可用的 ANGLE 零拷贝渲染目标（EGL_ANGLE_iosurface_client_buffer），
-// 须对两种 Apple 平台都包含这些头，AttachIOSurface 才能编译。
-#include <IOSurface/IOSurface.h>
 #include <EGL/eglext.h>
 #include <EGL/eglext_angle.h>
 #include <GLES2/gl2ext.h>
 #include <GLES2/gl2ext_angle.h>
+#if TARGET_OS_OSX
+#include <IOSurface/IOSurface.h>
+#else
+// iOS：IOSurface.framework 只通过 ObjC / `@import IOSurface` 暴露，
+// C++ 里 `#include <IOSurface/IOSurface.h>` 找不到头文件（framework 在 SDK 里
+// 但 Headers 目录无 C 头）。这里手动前置声明引擎所需的最小 C 接口，实际符号
+// 由已链接的 IOSurface.framework 提供。
+#include <CoreFoundation/CoreFoundation.h>
+#include <cstdint>
+typedef uint32_t IOSurfaceID;
+typedef struct __IOSurface* IOSurfaceRef;
+extern "C" IOSurfaceRef IOSurfaceLookup(IOSurfaceID aSurfaceID);
+#endif // TARGET_OS_OSX
 #endif // __APPLE__
 
 #if defined(__ANDROID__)
