@@ -117,6 +117,15 @@ if(VCPKG_TARGET_IS_ANDROID AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
             WORKING_DIRECTORY "${_build_dir}"
             LOGNAME "config-${_cfg}-${TARGET_TRIPLET}"
         )
+        # 修正 autotools VPATH 构建：intl 的 Makefile 令 bindtextdom.lo 等依赖
+        # `../config.h`（构建目录上一级），而 out-of-tree 下 config.h 实际在位生成于
+        # 构建目录根。vcpkg 原厂也是用同样替换解决（见非 Android 分支的 Makefile 修正）。
+        file(GLOB _intl_mk "${_build_dir}/Makefile" "${_build_dir}/intl/Makefile")
+        foreach(_mf IN LISTS _intl_mk)
+            file(READ "${_mf}" _mk_rules)
+            string(REPLACE "  ../config.h" "  config.h" _mk_rules "${_mk_rules}")
+            file(WRITE "${_mf}" "${_mk_rules}")
+        endforeach()
         vcpkg_execute_build_process(
             COMMAND make -j ${VCPKG_CONCURRENCY}
             WORKING_DIRECTORY "${_build_dir}"
