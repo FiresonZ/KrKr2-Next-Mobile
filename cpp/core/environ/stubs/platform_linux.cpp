@@ -42,6 +42,7 @@
 #include "Platform.h"
 #include "SysInitImpl.h"
 #include "StorageImpl.h"
+#include "EventIntf.h"
 
 // ---------------------------------------------------------------------------
 // 文件操作
