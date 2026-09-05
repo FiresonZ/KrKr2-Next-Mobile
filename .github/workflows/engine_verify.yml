@@ -95,7 +95,8 @@ jobs:
 
       - name: Smoke test tools/xp3
         run: |
-          XP3_BIN="out/linux/debug/tools/xp3/xp3"
+          # xp3 目标设了 CMAKE_RUNTIME_OUTPUT_DIRECTORY=tools/bin/dbg，不在 out/ 下
+          XP3_BIN="tools/bin/dbg/xp3"
           if [ -x "$XP3_BIN" ]; then
             "$XP3_BIN" --help >/dev/null 2>&1 && echo "tools/xp3 smoke test OK"
           else
