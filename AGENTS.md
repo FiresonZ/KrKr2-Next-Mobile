@@ -56,10 +56,16 @@ cmake --preset "Linux Debug Config" && cmake --build --preset "Linux Debug Build
 | iOS 构建 + CI 打包 | ✅ 可出包（Live2D 条件编译修复后） |
 | Android 恢复（triplet/preset/JNI/Kotlin 插件/壳层） | ✅ 代码就绪，**尚未真机验证** |
 | Linux 引擎核心验证 CI（engine_verify.yml） | ✅ 首次绿灯（新增 Linux 宿主平台实现 platform_linux.cpp 等 11 项修复） |
-| SIMD 公式缺陷修复 | ✅ 已修，**逐像素比对验证中**（tests/tvpgl_simd_compare，挂 ctest） |
+| SIMD 公式缺陷修复 | ⚠️ 已回退保正确，修复列为待办：tests/tvpgl_simd_compare 逐像素比对证实 23 处 SIMD≠标量；PS 全系混合 / SubBlend_o / ScreenBlend 现指回 `*_c` 标量（`tvpgl_simd_init.cpp` 已注释对应注册），待逐模式修到与标量位级一致后放回 |
 | 构建提速 | ✅ 已删 bullet3、catch2 移动端，CI 加 ccache |
-| 测试基建 | ✅ 已建 SIMD 比对测试 tests/tvpgl_simd_compare（标量 `*_c` vs SIMD `_hwy`，挂 ctest） |
+| 测试基建 | ✅ 已建 SIMD 比对测试 tests/tvpgl_simd_compare（标量 `*_c` vs SIMD `_hwy`，挂 ctest）；已证实并定位 23 处分歧 |
 
 ## 建议的下一步
 
-1. ~~跑通 Linux engine_verify CI（修首次编译问题）~~ ✅ 已绿灯 → 2. ~~写 SIMD 比对测试挂 Linux CI~~ ✅ tests/tvpgl_simd_compare → 3. Android 真机验证（用户有安卓手机）→ 4. iOS 产物在 iPhone 6s 验证 → 5. 真机问题修复后进入游戏兼容性测试（docs/dev/compatibility.md）。
+1. ~~跑通 Linux engine_verify CI（修首次编译问题）~~ ✅ 已绿灯
+2. ~~写 SIMD 比对测试挂 Linux CI~~ ✅ tests/tvpgl_simd_compare（已开跑，证实并定位 23 处 SIMD≠标量）
+3. ~~PS 全系 / SubBlend_o / ScreenBlend 先回退标量保正确~~ ✅（`tvpgl_simd_init.cpp`，修 SIMD 列待办）
+4. 重跑 Linux engine_verify CI，确认 ctest 全绿（回退后）
+5. 构 Android APK + iOS IPA 真机实测（继续 Android/iOS 真机验证路径）
+6. 逐模式修 SIMD 至位级一致（待办：PsApplyAlpha 舍入序 + SubBlend_o/ScreenBlend alpha + Overlay/HardLight 分支），tests 逐模式验证后放回
+7. 真机问题修复后进入游戏兼容性测试（docs/dev/compatibility.md）
