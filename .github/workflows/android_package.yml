@@ -54,15 +54,14 @@ jobs:
           cmake --version | head -1
           ninja --version
 
-      - name: Cache ccache
-        uses: actions/cache@v4
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        id: ccache
         with:
           path: ~/.cache/ccache
           key: ccache-${{ runner.os }}-${{ github.ref }}
           restore-keys: |
             ccache-${{ runner.os }}-
-          # job 失败时也保存缓存，避免修复编译错误期间反复全量重编
-          save-always: true
 
       - name: Install Android NDK
         run: |
@@ -75,16 +74,15 @@ jobs:
           echo "ANDROID_NDK_HOME=$(ls -1d "$ANDROID_HOME"/ndk/* | sort -V | tail -n 1)" >> "$GITHUB_ENV"
           echo "NDK root: $ANDROID_NDK_HOME"
 
-      - name: Cache vcpkg binary cache
+      - name: Restore vcpkg binary cache
         # vcpkg 二进制缓存：首次全量编译后，后续运行秒级还原依赖
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
+        id: vcpkg
         with:
           path: ~/.cache/vcpkg
           key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
           restore-keys: |
             vcpkg-${{ runner.os }}-
-          # job 失败时也保存（vcpkg 按包增量写入，已编译完的包仍然有效），避免每次全量重装
-          save-always: true
 
       - name: Build C++ engine + Flutter Android app
         run: |
@@ -93,6 +91,22 @@ jobs:
           # 兜底：Windows 上传/zip 解压易丢失执行位，先确保 build.sh 可执行
           chmod +x build.sh
           ./build.sh android "$BUILD_TYPE"
+
+      - name: Save ccache
+        # build 失败也保存（ccache 内容寻址，已编译对象依然有效），用官方推荐的显式 save
+        if: ${{ always() && steps.ccache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.ref }}
+
+      - name: Save vcpkg binary cache
+        # build 失败也保存（vcpkg 按包增量写入，已编译完的包仍然有效）
+        if: ${{ always() && steps.vcpkg.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/vcpkg
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
 
       - name: Package APK
         run: |
