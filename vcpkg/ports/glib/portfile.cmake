@@ -82,11 +82,14 @@ if(VCPKG_TARGET_IS_ANDROID AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
         set(_glib_c_wrap "${_glib_bin}/aarch64-linux-android${_glib_api}-clang")
         set(_glib_cpp_wrap "${_glib_bin}/aarch64-linux-android${_glib_api}-clang++")
         if(EXISTS "${_glib_c_wrap}" AND EXISTS "${_glib_cpp_wrap}")
-            # NDK 多架构包装器：内嵌 --target 与 --sysroot，最稳
-            set(_glib_cc_line "c = ['${_glib_c_wrap}']\ncpp = ['${_glib_cpp_wrap}']\nc_ld = ['${_glib_c_wrap}']\ncpp_ld = ['${_glib_cpp_wrap}']")
+            # NDK 多架构包装器：内嵌 --target 与 --sysroot，编译最稳。
+            # 注意：不能设置 c_ld/cpp_ld 为编译器包装器——meson 会把它当作
+            # "GNU 链接器" 去探测，向 clang 传 --fix-cortex-a53-843419 等 GNU
+            # 参数导致 linker detection 失败。链路目标由下方 c_link_args 强制。
+            set(_glib_cc_line "c = ['${_glib_c_wrap}']\ncpp = ['${_glib_cpp_wrap}']")
         else()
             # 退路：通用 clang + 显式 target/sysroot/isystem
-            set(_glib_cc_line "c = ['${_glib_bin}/clang', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']\ncpp = ['${_glib_bin}/clang++', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']\nc_ld = ['${_glib_bin}/clang', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}']\ncpp_ld = ['${_glib_bin}/clang++', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}']")
+            set(_glib_cc_line "c = ['${_glib_bin}/clang', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']\ncpp = ['${_glib_bin}/clang++', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']")
         endif()
         # 关键：vcpkg 生成的交叉文件会在 c_link_args 里注入 --target=armv7...，
         # 覆盖链接器默认目标，导致已按 arm64 编译的 .o/.a 链接时仍按 armv7 报
