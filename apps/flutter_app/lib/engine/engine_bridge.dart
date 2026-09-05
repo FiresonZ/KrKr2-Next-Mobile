@@ -104,6 +104,7 @@ abstract interface class EngineBridge {
   Future<int> engineOpenGameAsync(String gameRootPath, {String? startupScript});
   Future<EngineStartupState?> engineGetStartupState();
   Future<String> engineDrainStartupLogs();
+  Future<int> engineSetLogFilePath(String path);
   Future<int> engineTick({int deltaMs = 16});
   Future<int> enginePause();
   Future<int> engineResume();

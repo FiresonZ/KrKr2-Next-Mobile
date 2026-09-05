@@ -79,6 +79,11 @@ class FlutterEngineBridgeAdapter implements EngineBridge {
   }
 
   @override
+  Future<int> engineSetLogFilePath(String path) {
+    return _delegate.engineSetLogFilePath(path);
+  }
+
+  @override
   Future<int> engineTick({int deltaMs = 16}) {
     return _delegate.engineTick(deltaMs: deltaMs);
   }

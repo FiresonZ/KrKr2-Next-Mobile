@@ -193,6 +193,16 @@ ENGINE_API_EXPORT engine_result_t engine_drain_startup_logs(
     uint32_t* out_bytes_written);
 
 /*
+ * Directs all engine (spdlog) output to a file: rotates at 4 MiB, keeps 3.
+ * On mobile the plugin passes the app sandbox writable path
+ * (Documents / filesDir) + "/krkr2_engine.log" at startup, so logs are
+ * retrievable when the debug console is closed or stdout is not captured
+ * (e.g. idevicesyslog on iOS does NOT surface app stdout).
+ * Passing NULL or "" disables file logging (stdout sinks stay active).
+ */
+ENGINE_API_EXPORT engine_result_t engine_set_log_file_path(const char* path);
+
+/*
  * Ticks engine main loop once.
  * handle must be non-null.
  * delta_ms is caller-provided elapsed milliseconds.

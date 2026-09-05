@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:label="krkr2"
+        android:label="KrKr2 Next Mobile"
         android:name="${applicationName}"
         android:icon="@drawable/ic_launcher"
         android:enableOnBackInvokedCallback="true">

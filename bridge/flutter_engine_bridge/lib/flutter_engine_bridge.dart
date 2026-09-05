@@ -127,6 +127,22 @@ class FlutterEngineBridge {
     return logs;
   }
 
+  /// Direct engine spdlog output to [path] (rotating file sink).
+  /// Call before engineOpenGame. Returns engine result code.
+  Future<int> engineSetLogFilePath(String path) async {
+    final ffi = _ffiBridge;
+    if (ffi == null) {
+      return kEngineResultNotSupported;
+    }
+    final result = ffi.setLogFilePath(path);
+    if (result != kEngineResultOk) {
+      _fallbackLastError = ffi.lastError();
+    } else {
+      _fallbackLastError = '';
+    }
+    return result;
+  }
+
   Future<int> engineTick({int deltaMs = 16}) async {
     return _withFfiCall(
       apiName: 'engine_tick',

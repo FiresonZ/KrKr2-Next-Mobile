@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../engine/engine_bridge.dart';
 import '../engine/flutter_engine_bridge_adapter.dart';
@@ -373,6 +374,17 @@ class _GamePageState extends State<GamePage> with WidgetsBindingObserver {
       return;
     }
     _log('engine_create => OK');
+
+    // 把引擎 spdlog 同时写入沙盒 Documents/krkr2_engine.log，
+    // 便于定位问题时在手机上读取（idevicesyslog 不捕获 app stdout）。
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final logFile = '${docDir.path}/krkr2_engine.log';
+      final logResult = await _bridge.engineSetLogFilePath(logFile);
+      _log('engine_set_log_file_path($logFile) => $logResult');
+    } catch (e) {
+      _log('engine_set_log_file_path unavailable: $e');
+    }
 
     // Set renderer pipeline (opengl / software) before opening the game
     final prefs = await SharedPreferences.getInstance();

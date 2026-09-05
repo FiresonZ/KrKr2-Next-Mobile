@@ -539,7 +539,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     leading: const Icon(Icons.person_outline),
                     title: Text(l10n.aboutAuthor),
                     trailing: Text(
-                      'reAAAq',
+                      'FiresonZ',
                       style: TextStyle(
                         color: colorScheme.primary,
                         fontWeight: FontWeight.w600,
@@ -551,7 +551,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     leading: const Icon(Icons.email_outlined),
                     title: Text(l10n.aboutEmail),
                     trailing: Text(
-                      'wangguanzhiabcd@126.com',
+                      'dev@gith.uk',
                       style: TextStyle(
                         color: colorScheme.primary,
                         fontSize: 13,
@@ -559,7 +559,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     onTap: () {
                       Clipboard.setData(
-                        const ClipboardData(text: 'wangguanzhiabcd@126.com'),
+                        const ClipboardData(text: 'dev@gith.uk'),
                       );
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -574,7 +574,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     leading: const Icon(Icons.code),
                     title: const Text('GitHub'),
                     subtitle: const Text(
-                      'github.com/reAAAq/KrKr2-Next',
+                      'github.com/FiresonZ/KrKr2-Next-Mobile',
                       style: TextStyle(fontSize: 12),
                     ),
                     trailing: Icon(
@@ -584,7 +584,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     onTap: () {
                       launchUrl(
-                        Uri.parse('https://github.com/reAAAq/KrKr2-Next'),
+                        Uri.parse('https://github.com/FiresonZ/KrKr2-Next-Mobile'),
                         mode: LaunchMode.externalApplication,
                       );
                     },
