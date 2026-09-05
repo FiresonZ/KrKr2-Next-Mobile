@@ -83,19 +83,25 @@ if(VCPKG_TARGET_IS_ANDROID AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
         set(_glib_cpp_wrap "${_glib_bin}/aarch64-linux-android${_glib_api}-clang++")
         if(EXISTS "${_glib_c_wrap}" AND EXISTS "${_glib_cpp_wrap}")
             # NDK 多架构包装器：内嵌 --target 与 --sysroot，最稳
-            set(_glib_cc_line "c = ['${_glib_c_wrap}']\ncpp = ['${_glib_cpp_wrap}']")
+            set(_glib_cc_line "c = ['${_glib_c_wrap}']\ncpp = ['${_glib_cpp_wrap}']\nc_ld = ['${_glib_c_wrap}']\ncpp_ld = ['${_glib_cpp_wrap}']")
         else()
             # 退路：通用 clang + 显式 target/sysroot/isystem
-            set(_glib_cc_line "c = ['${_glib_bin}/clang', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']\ncpp = ['${_glib_bin}/clang++', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']")
+            set(_glib_cc_line "c = ['${_glib_bin}/clang', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']\ncpp = ['${_glib_bin}/clang++', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']\nc_ld = ['${_glib_bin}/clang', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}']\ncpp_ld = ['${_glib_bin}/clang++', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}']")
         endif()
+        # 关键：vcpkg 生成的交叉文件会在 c_link_args 里注入 --target=armv7...，
+        # 覆盖链接器默认目标，导致已按 arm64 编译的 .o/.a 链接时仍按 armv7 报
+        # "incompatible with armelf_linux_eabi"。这里覆盖 c_link_args，强制
+        # 链接目标为 aarch64（wrapper 或显式参数都附带上正确的 target/sysroot）。
+        set(_glib_link_args "c_link_args = ['--target=${_glib_target}', '--sysroot=${_glib_sysroot}']\ncpp_link_args = ['--target=${_glib_target}', '--sysroot=${_glib_sysroot}']")
+        set(_glib_builtin_opts "c_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\ncpp_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\n${_glib_link_args}")
         if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
             set(_glib_cross_dbg "${CURRENT_BUILDTREES_DIR}/meson-cross-arm64-android-dbg.ini")
-            file(WRITE "${_glib_cross_dbg}" "[binaries]\n${_glib_cc_line}\n\n[built-in options]\nc_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\ncpp_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\n")
+            file(WRITE "${_glib_cross_dbg}" "[binaries]\n${_glib_cc_line}\n\n[built-in options]\n${_glib_builtin_opts}\n")
             set(VCPKG_MESON_CROSS_FILE_DEBUG "${_glib_cross_dbg}")
         endif()
         if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "release")
             set(_glib_cross_rel "${CURRENT_BUILDTREES_DIR}/meson-cross-arm64-android-rel.ini")
-            file(WRITE "${_glib_cross_rel}" "[binaries]\n${_glib_cc_line}\n\n[built-in options]\nc_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\ncpp_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\n")
+            file(WRITE "${_glib_cross_rel}" "[binaries]\n${_glib_cc_line}\n\n[built-in options]\n${_glib_builtin_opts}\n")
             set(VCPKG_MESON_CROSS_FILE "${_glib_cross_rel}")
             set(VCPKG_MESON_CROSS_FILE_RELEASE "${_glib_cross_rel}")
         endif()
