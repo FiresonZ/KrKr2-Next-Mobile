@@ -91,20 +91,26 @@ if(VCPKG_TARGET_IS_ANDROID AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
             # 退路：通用 clang + 显式 target/sysroot/isystem
             set(_glib_cc_line "c = ['${_glib_bin}/clang', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']\ncpp = ['${_glib_bin}/clang++', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']")
         endif()
-        # 关键：vcpkg 生成的交叉文件会在 c_link_args 里注入 --target=armv7...，
-        # 覆盖链接器默认目标，导致已按 arm64 编译的 .o/.a 链接时仍按 armv7 报
-        # "incompatible with armelf_linux_eabi"。这里覆盖 c_link_args，强制
-        # 链接目标为 aarch64（wrapper 或显式参数都附带上正确的 target/sysroot）。
-        set(_glib_link_args "c_link_args = ['--target=${_glib_target}', '--sysroot=${_glib_sysroot}']\ncpp_link_args = ['--target=${_glib_target}', '--sysroot=${_glib_sysroot}']")
-        set(_glib_builtin_opts "c_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\ncpp_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\n${_glib_link_args}")
+        # 关键：
+        # 1) vcpkg 生成的交叉文件会在 c_link_args 里注入 --target=armv7...，覆盖链接器
+        #    默认目标，导致己按 arm64 编译的 .o/.a 链接时仍按 armv7 报 incompatible with
+        #    armelf_linux_eabi。这里覆盖 c_link_args 强制 aarch64。
+        # 2) Android(Bionic) 无内置 iconv，meson 探测 iconv 时会用 -I/-L 找 iconv.h 与
+        #    -liconv，但 vcpkg 不会把 installed 的头/库路径注入 meson 的依赖探测（probe）。
+        #    故在 c_args/c_link_args 里显式追加 vcpkg installed 的 include/lib。
+        set(_glib_inc "${CURRENT_INSTALLED_DIR}/include")
+        set(_glib_common_args "'-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64', '-I${_glib_inc}'")
+        set(_glib_link_base "'--target=${_glib_target}', '--sysroot=${_glib_sysroot}'")
         if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
+            set(_glib_link_dbg "${_glib_link_base}, '-L${CURRENT_INSTALLED_DIR}/debug/lib'")
             set(_glib_cross_dbg "${CURRENT_BUILDTREES_DIR}/meson-cross-arm64-android-dbg.ini")
-            file(WRITE "${_glib_cross_dbg}" "[binaries]\n${_glib_cc_line}\n\n[built-in options]\n${_glib_builtin_opts}\n")
+            file(WRITE "${_glib_cross_dbg}" "[binaries]\n${_glib_cc_line}\n\n[built-in options]\nc_args = [${_glib_common_args}]\ncpp_args = [${_glib_common_args}]\nc_link_args = [${_glib_link_dbg}]\ncpp_link_args = [${_glib_link_dbg}]\n")
             set(VCPKG_MESON_CROSS_FILE_DEBUG "${_glib_cross_dbg}")
         endif()
         if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "release")
+            set(_glib_link_rel "${_glib_link_base}, '-L${CURRENT_INSTALLED_DIR}/lib'")
             set(_glib_cross_rel "${CURRENT_BUILDTREES_DIR}/meson-cross-arm64-android-rel.ini")
-            file(WRITE "${_glib_cross_rel}" "[binaries]\n${_glib_cc_line}\n\n[built-in options]\n${_glib_builtin_opts}\n")
+            file(WRITE "${_glib_cross_rel}" "[binaries]\n${_glib_cc_line}\n\n[built-in options]\nc_args = [${_glib_common_args}]\ncpp_args = [${_glib_common_args}]\nc_link_args = [${_glib_link_rel}]\ncpp_link_args = [${_glib_link_rel}]\n")
             set(VCPKG_MESON_CROSS_FILE "${_glib_cross_rel}")
             set(VCPKG_MESON_CROSS_FILE_RELEASE "${_glib_cross_rel}")
         endif()
