@@ -65,16 +65,33 @@ jobs:
 
       - name: Install Android NDK (pinned 27)
         # 显式锁 NDK 27.0.12077973，而不是 `ls | sort -V | tail -n1` 取“最新”。
-        # 托管 runner 会预装更新的 NDK（如 29），原写法会误选 29 并把作者相中的 27 覆盖掉；
-        # libffi:arm64-android 在 NDK 29 下交叉编译失败（用 armv7 target 编 aarch64 后端）。
+        # 托管 runner 会预装更新的 NDK（如 29），原写法会误选 29；libffi:arm64-android
+        # 在 NDK 29 下交叉编译失败。注意 sdkmanager 不在 PATH，须用全路径
+        # （$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager）。
         run: |
           NDK_VER="27.0.12077973"
           if [ ! -d "$ANDROID_HOME/ndk/$NDK_VER" ]; then
-            yes | sdkmanager --licenses >/dev/null 2>&1 || true
-            sdkmanager --install "ndk;$NDK_VER"
+            SDKMGR=""
+            for c in "$ANDROID_HOME"/cmdline-tools/latest/bin/sdkmanager \
+                     "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager \
+                     "$ANDROID_HOME"/tools/bin/sdkmanager; do
+              if [ -x "$c" ]; then SDKMGR="$c"; break; fi
+            done
+            if [ -n "$SDKMGR" ]; then
+              yes | "$SDKMGR" --licenses >/dev/null 2>&1 || true
+              "$SDKMGR" --install "ndk;$NDK_VER" >/dev/null 2>&1 || true
+            else
+              echo "::warning::sdkmanager 未找到，无法安装 NDK $NDK_VER"
+            fi
           fi
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VER" >> "$GITHUB_ENV"
-          echo "NDK root: $ANDROID_HOME/ndk/$NDK_VER"
+          if [ -d "$ANDROID_HOME/ndk/$NDK_VER" ]; then
+            ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VER"
+          else
+            ANDROID_NDK_HOME="$(ls -1d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -n 1)"
+            echo "::warning::NDK $NDK_VER 未就绪，回退到 $ANDROID_NDK_HOME"
+          fi
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> "$GITHUB_ENV"
+          echo "NDK root: $ANDROID_NDK_HOME"
 
       - name: Restore vcpkg binary cache
         # vcpkg 二进制缓存：首次全量编译后，后续运行秒级还原依赖
