@@ -20,7 +20,9 @@ get_filename_component(PKGCONFIG_PATH "${PKGCONFIG}" DIRECTORY)
 vcpkg_add_to_path("${PKGCONFIG_PATH}")
 
 if(VCPKG_TARGET_IS_LINUX)
-    set(OPTIONS -DWITH_X11=ON)
+    # Linux 宿主验证与移动端（Android/iOS/macOS）保持一致：关 pango，避免把
+    # pangofc-font.h 等依赖头传播给消费方（layerex_draw 插件会包含 *-private.h）
+    set(OPTIONS -DWITH_X11=ON -DWITH_PANGO=OFF)
 elseif (VCPKG_TARGET_IS_ANDROID OR VCPKG_TARGET_IS_OSX OR VCPKG_TARGET_IS_IOS)
     set(OPTIONS -DWITH_PANGO=OFF)
 endif()
