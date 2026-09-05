@@ -18,6 +18,13 @@
 #include "tvpgl.h"
 #include "tvpgl_simd_init.h"
 
+// 生产路径顺序：TVPInitTVPGL() 先调 TVPGL_C_Init()（把全部函数指针设为 *_c 标量
+// 默认），再调 TVPGL_SIMD_Init()（覆盖为 _hwy）。测试必须同序——否则被回退到
+// 标量的函数（TVPGL_SIMD_Init 不再赋值）其指针会保持零初始化(NULL)，调用即崩。
+// TVPGL_C_Init 未在头文件声明，此处补 C++ 链接的外部声明（定义见
+// cpp/core/visual/gl/blend_function.cpp）。
+extern void TVPGL_C_Init();
+
 // 确定性伪随机（xorshift32），保证可复现
 static uint32_t g_rng = 0x9E37'79B9u;
 static uint32_t NextRng() {
@@ -124,6 +131,7 @@ static void RunPsBlendFamilies() {
 
 int main() {
     // 先按标量初始化，再把函数指针切到 SIMD（生产路径顺序：C_Init -> SIMD_Init）
+    TVPGL_C_Init();
     TVPGL_SIMD_Init();
 
     RunSubBlendFamily();
