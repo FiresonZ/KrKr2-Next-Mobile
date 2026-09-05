@@ -31,6 +31,7 @@ void krkr_GetSurfaceDimensions(uint32_t*, uint32_t*);
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/spdlog.h>
 
 #include "environ/Application.h"
@@ -149,6 +150,11 @@ engine_handle_t g_runtime_startup_owner = nullptr;
 std::once_flag g_loggers_init_once;
 std::shared_ptr<spdlog::sinks::sink> g_startup_log_sink;
 constexpr size_t kMaxStartupLogs = 4000;
+
+// Optional rotating file sink (set via engine_set_log_file_path on mobile).
+std::mutex g_logfile_mutex;
+std::string g_log_file_path;
+std::shared_ptr<spdlog::sinks::sink> g_file_sink;
 
 void PushRuntimeSpdlogToStartupQueue(const spdlog::details::log_msg& msg);
 
@@ -1033,6 +1039,57 @@ engine_result_t engine_drain_startup_logs(engine_handle_t handle,
   *out_bytes_written = written;
   ClearHandleErrorLocked(impl);
   SetThreadError(nullptr);
+  return ENGINE_RESULT_OK;
+}
+
+// Attach the shared file sink to every engine logger if not already attached.
+static void AttachFileSinkToLoggers(const std::shared_ptr<spdlog::logger>& core,
+                                    const std::shared_ptr<spdlog::logger>& tjs2,
+                                    const std::shared_ptr<spdlog::logger>& plugin) {
+  if (!g_file_sink) {
+    return;
+  }
+  auto attach = [](const std::shared_ptr<spdlog::logger>& logger) {
+    if (!logger) {
+      return;
+    }
+    for (const auto& sink : logger->sinks()) {
+      if (sink.get() == g_file_sink.get()) {
+        return;  // already attached
+      }
+    }
+    logger->sinks().push_back(g_file_sink);
+  };
+  attach(core);
+  attach(tjs2);
+  attach(plugin);
+  // The "core" logger is set as the default by EnsureRuntimeLoggersInitialized;
+  // attach there too in case the default points to a different logger.
+  if (auto def = spdlog::default_logger(); def && def != core) {
+    attach(def);
+  }
+}
+
+engine_result_t engine_set_log_file_path(const char* path) {
+  if (path == nullptr || path[0] == '\0') {
+    std::lock_guard<std::mutex> lock(g_logfile_mutex);
+    g_log_file_path.clear();
+    g_file_sink.reset();
+    return ENGINE_RESULT_OK;
+  }
+
+  // Ensure the default loggers exist, then (re)create the rotating file sink.
+  EnsureRuntimeLoggersInitialized();
+
+  std::lock_guard<std::mutex> lock(g_logfile_mutex);
+  g_log_file_path = path;
+  g_file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
+      path, 4u * 1024u * 1024u, 3);
+  AttachFileSinkToLoggers(EnsureNamedLogger("core"),
+                          EnsureNamedLogger("tjs2"),
+                          EnsureNamedLogger("plugin"));
+  spdlog::info("engine_set_log_file_path: engine log -> {}", path);
+  spdlog::default_logger()->flush();
   return ENGINE_RESULT_OK;
 }
 
@@ -2399,6 +2456,13 @@ engine_result_t engine_drain_startup_logs(engine_handle_t handle,
   impl->last_error.clear();
   SetThreadError(nullptr);
   return ENGINE_RESULT_OK;
+}
+
+// Stub build: file logging is not applicable.
+engine_result_t engine_set_log_file_path(const char* path) {
+  (void)path;
+  SetThreadError("engine_set_log_file_path is not supported in stub build");
+  return ENGINE_RESULT_NOT_SUPPORTED;
 }
 
 engine_result_t engine_tick(engine_handle_t handle, uint32_t delta_ms) {

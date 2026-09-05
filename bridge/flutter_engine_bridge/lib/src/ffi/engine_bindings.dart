@@ -253,6 +253,8 @@ typedef _EngineDrainStartupLogsNative =
     Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint32, Pointer<Uint32>);
 typedef _EngineDrainStartupLogsDart =
     int Function(Pointer<Void>, Pointer<Utf8>, int, Pointer<Uint32>);
+typedef _EngineSetLogFilePathNative = Int32 Function(Pointer<Utf8>);
+typedef _EngineSetLogFilePathDart = int Function(Pointer<Utf8>);
 
 typedef _EngineTickNative = Int32 Function(Pointer<Void>, Uint32);
 typedef _EngineTickDart = int Function(Pointer<Void>, int);
@@ -347,6 +349,11 @@ class EngineBindings {
             _EngineDrainStartupLogsNative,
             _EngineDrainStartupLogsDart
           >('engine_drain_startup_logs'),
+      engineSetLogFilePath = library
+          .lookupFunction<
+            _EngineSetLogFilePathNative,
+            _EngineSetLogFilePathDart
+          >('engine_set_log_file_path'),
       engineTick = library.lookupFunction<_EngineTickNative, _EngineTickDart>(
         'engine_tick',
       ),
@@ -418,6 +425,7 @@ class EngineBindings {
   final int Function(Pointer<Void>, Pointer<Uint32>) engineGetStartupState;
   final int Function(Pointer<Void>, Pointer<Utf8>, int, Pointer<Uint32>)
   engineDrainStartupLogs;
+  final int Function(Pointer<Utf8>) engineSetLogFilePath;
   final int Function(Pointer<Void>, int) engineTick;
   final int Function(Pointer<Void>) enginePause;
   final int Function(Pointer<Void>) engineResume;

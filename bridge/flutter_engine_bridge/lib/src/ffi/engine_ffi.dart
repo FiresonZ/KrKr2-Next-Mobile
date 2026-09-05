@@ -259,6 +259,15 @@ class EngineFfiBridge {
     }
   }
 
+  int setLogFilePath(String path) {
+    final pathPtr = path.toNativeUtf8();
+    try {
+      return _bindings.engineSetLogFilePath(pathPtr);
+    } finally {
+      calloc.free(pathPtr);
+    }
+  }
+
   int tick({int deltaMs = 16}) {
     return _bindings.engineTick(_handle, deltaMs);
   }
