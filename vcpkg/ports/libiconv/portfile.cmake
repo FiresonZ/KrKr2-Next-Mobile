@@ -10,10 +10,11 @@
 # vcpkg-make 注错的 env），得到正确的 arm64 归档。非 Android 走原厂 make 流程。
 
 vcpkg_download_distfile(ARCHIVE
-    URLS "https://ftpmirror.gnu.org/gnu/libiconv/libiconv-${VERSION}.tar.gz"
-         "https://ftp.gnu.org/gnu/libiconv/libiconv-${VERSION}.tar.gz"
+    URLS "https://ftp.gnu.org/gnu/libiconv/libiconv-${VERSION}.tar.gz"
+         "https://www.mirrorservice.org/sites/ftp.gnu.org/gnu/libiconv/libiconv-${VERSION}.tar.gz"
     FILENAME "libiconv-${VERSION}.tar.gz"
-    SHA512 1e8150f9bca907579330cd9c44ebbee46a260271fbe8f50d5ee24a39ef29c8d254505e85c3409324f7440596da711a8bd49e89f848a6be0cb3238a58c24aaecd
+    SHA512 a55eb3b7b785a78ab8918db8af541c9e11deb5ff4f89d54483287711ed797d87848ce0eafffa7ce26d9a7adb4b5a9891cb484f94bd4f51d3ce97a6a47b4c719a
+    SOURCE_BASE "v${VERSION}"
 )
 vcpkg_extract_source_archive(SOURCE_PATH
     ARCHIVE "${ARCHIVE}"
