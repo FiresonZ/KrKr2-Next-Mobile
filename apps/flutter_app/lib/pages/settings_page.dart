@@ -551,7 +551,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     leading: const Icon(Icons.email_outlined),
                     title: Text(l10n.aboutEmail),
                     trailing: Text(
-                      'wangguanzhiabcd@126.com',
+                      'dev@gith.uk',
                       style: TextStyle(
                         color: colorScheme.primary,
                         fontSize: 13,
@@ -559,7 +559,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     onTap: () {
                       Clipboard.setData(
-                        const ClipboardData(text: 'wangguanzhiabcd@126.com'),
+                        const ClipboardData(text: 'dev@gith.uk'),
                       );
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

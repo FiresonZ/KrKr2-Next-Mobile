@@ -91,7 +91,8 @@ class _Krkr2AppState extends State<Krkr2App> {
       themeMode: _themeMode,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.pink,
+          // 黑白单色调——个人印记配色，与原作者(粉色)区分
+          seedColor: Colors.black,
           brightness: Brightness.light,
         ),
         useMaterial3: true,
@@ -104,7 +105,8 @@ class _Krkr2AppState extends State<Krkr2App> {
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.pink,
+          // 黑白单色调——个人印记配色，与原作者(粉色)区分
+          seedColor: Colors.black,
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
