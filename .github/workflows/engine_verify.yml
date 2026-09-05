@@ -44,6 +44,8 @@ jobs:
           key: ccache-linux-core-${{ github.ref }}
           restore-keys: |
             ccache-linux-core-
+          # job 失败时也保存缓存，避免修复编译错误期间反复全量重编
+          save-always: true
 
       - name: Cache vcpkg binary cache
         uses: actions/cache@v4
@@ -52,6 +54,8 @@ jobs:
           key: vcpkg-linux-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
           restore-keys: |
             vcpkg-linux-
+          # job 失败时也保存缓存，避免修复编译错误期间每次全量重装一次性三方依赖
+          save-always: true
 
       - name: Configure + build engine core (Linux host)
         run: |
