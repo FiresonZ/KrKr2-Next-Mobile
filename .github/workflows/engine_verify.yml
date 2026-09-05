@@ -37,25 +37,23 @@ jobs:
           ninja --version
           bison --version | head -1
 
-      - name: Cache ccache
-        uses: actions/cache@v4
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        id: ccache
         with:
           path: ~/.cache/ccache
           key: ccache-linux-core-${{ github.ref }}
           restore-keys: |
             ccache-linux-core-
-          # job 失败时也保存缓存，避免修复编译错误期间反复全量重编
-          save-always: true
 
-      - name: Cache vcpkg binary cache
-        uses: actions/cache@v4
+      - name: Restore vcpkg binary cache
+        uses: actions/cache/restore@v4
+        id: vcpkg
         with:
           path: ~/.cache/vcpkg
           key: vcpkg-linux-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
           restore-keys: |
             vcpkg-linux-
-          # job 失败时也保存缓存，避免修复编译错误期间每次全量重装一次性三方依赖
-          save-always: true
 
       - name: Configure + build engine core (Linux host)
         run: |
@@ -69,6 +67,23 @@ jobs:
           export VCPKG_ROOT="$PWD/.devtools/vcpkg"
           cmake --preset "Linux Debug Config"
           cmake --build --preset "Linux Debug Build" -- -j"$JOBS"
+
+      - name: Save ccache
+        # build 失败也保存（ccache 内容寻址，已编译对象依然有效）——用官方推荐的显式 save，
+        # 不再依赖已废弃且不可靠的 save-always
+        if: ${{ always() && steps.ccache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-linux-core-${{ github.ref }}
+
+      - name: Save vcpkg binary cache
+        # build 失败也保存（vcpkg 按包增量写入，已编译完的包仍然有效）
+        if: ${{ always() && steps.vcpkg.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/vcpkg
+          key: vcpkg-linux-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
 
       - name: Run tests (ctest, if any)
         run: |
