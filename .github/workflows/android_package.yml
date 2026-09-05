@@ -63,16 +63,18 @@ jobs:
           restore-keys: |
             ccache-${{ runner.os }}-
 
-      - name: Install Android NDK
+      - name: Install Android NDK (pinned 27)
+        # 显式锁 NDK 27.0.12077973，而不是 `ls | sort -V | tail -n1` 取“最新”。
+        # 托管 runner 会预装更新的 NDK（如 29），原写法会误选 29 并把作者相中的 27 覆盖掉；
+        # libffi:arm64-android 在 NDK 29 下交叉编译失败（用 armv7 target 编 aarch64 后端）。
         run: |
-          if [ -d "$ANDROID_HOME/ndk" ] && [ -n "$(ls -A "$ANDROID_HOME/ndk" 2>/dev/null)" ]; then
-            echo "NDK already present under $ANDROID_HOME/ndk"
-          else
+          NDK_VER="27.0.12077973"
+          if [ ! -d "$ANDROID_HOME/ndk/$NDK_VER" ]; then
             yes | sdkmanager --licenses >/dev/null 2>&1 || true
-            sdkmanager --install "ndk;27.0.12077973"
+            sdkmanager --install "ndk;$NDK_VER"
           fi
-          echo "ANDROID_NDK_HOME=$(ls -1d "$ANDROID_HOME"/ndk/* | sort -V | tail -n 1)" >> "$GITHUB_ENV"
-          echo "NDK root: $ANDROID_NDK_HOME"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VER" >> "$GITHUB_ENV"
+          echo "NDK root: $ANDROID_HOME/ndk/$NDK_VER"
 
       - name: Restore vcpkg binary cache
         # vcpkg 二进制缓存：首次全量编译后，后续运行秒级还原依赖
