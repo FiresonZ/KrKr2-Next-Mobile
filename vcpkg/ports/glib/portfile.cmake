@@ -118,6 +118,16 @@ if(VCPKG_TARGET_IS_ANDROID AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
     endif()
 endif()
 
+# 理由：vcpkg 原厂 gettext-libintl 在 arm64-android 上仍被 get_cmake_vars 错推成
+# armv7 构建，产出 32 位 libintl.a；glib（meson）在 NLS 开启时链接它，报
+#   ld.lld: error: .../libintl.a(...) is incompatible with aarch64linux
+# 本引擎不需要 gettext 消息翻译，故对 Android 禁用 NLS（-Dnls=disabled），
+# glib 便不再探测/链接 libintl，彻底绕开 32 位 libintl.a，也免去为 gettext 系列
+# 再补 arm64 overlay（其 autotools 依赖链更长、坑更多），相对改动最小、零回归。
+if(VCPKG_TARGET_IS_ANDROID)
+    vcpkg_list(APPEND OPTIONS -Dnls=disabled)
+endif()
+
 vcpkg_list(SET ADDITIONAL_BINARIES)
 if(VCPKG_HOST_IS_WINDOWS)
     # Presence of bash and sh enables installation of auxiliary components.
