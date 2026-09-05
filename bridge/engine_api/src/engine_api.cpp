@@ -1342,6 +1342,43 @@ engine_result_t engine_tick(engine_handle_t handle, uint32_t delta_ms) {
   } else {
     // IOSurface mode — just increment frame serial, no readback needed.
     // The render output is already in the shared IOSurface.
+    // 低频采样 IOSurface，区分黑屏两端归属：
+    //   采样非黑 -> 引擎已把画面写进共享 IOSurface，黑屏在 Flutter 读/显示侧；
+    //   采样全黑 -> 引擎 blit 到 IOSurface 的链路本身有问题。
+    if (impl->tick_count % 90 == 0) {
+      auto& iosurf_egl = krkr::GetEngineEGLContext();
+      if (iosurf_egl.HasIOSurface()) {
+        const int sampW = static_cast<int>(iosurf_egl.GetIOSurfaceWidth());
+        const int sampH = static_cast<int>(iosurf_egl.GetIOSurfaceHeight());
+        if (sampW > 0 && sampH > 0) {
+          GLint prevFbo = 0;
+          glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+          iosurf_egl.BindRenderTarget();
+          glFinish(); // 确保先前的 blit 命令已完成，再读回 IOSurface
+          uint64_t sR = 0, sG = 0, sB = 0, sA = 0;
+          int nonBlack = 0;
+          unsigned char px[4];
+          for (int gy = 0; gy < 5; ++gy) {
+            for (int gx = 0; gx < 5; ++gx) {
+              const int x = static_cast<int>(
+                  (static_cast<float>(gx) + 0.5f) * static_cast<float>(sampW) / 5.0f);
+              const int y = static_cast<int>(
+                  (static_cast<float>(gy) + 0.5f) * static_cast<float>(sampH) / 5.0f);
+              px[0] = px[1] = px[2] = px[3] = 0;
+              glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, px);
+              sR += px[0]; sG += px[1]; sB += px[2]; sA += px[3];
+              if (px[0] > 8 || px[1] > 8 || px[2] > 8) ++nonBlack;
+            }
+          }
+          glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+          spdlog::info(
+              "IOSurfacePixelSample: tick={} size={}x{} nonBlack={}/25 avg=({},{},{},{})",
+              static_cast<unsigned long long>(impl->tick_count), sampW, sampH,
+              nonBlack, static_cast<int>(sR / 25), static_cast<int>(sG / 25),
+              static_cast<int>(sB / 25), static_cast<int>(sA / 25));
+        }
+      }
+    }
     glFlush(); // Ensure GPU commands are submitted
     impl->frame.serial += 1;
     impl->frame.ready = true;
