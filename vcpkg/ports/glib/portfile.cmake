@@ -34,6 +34,75 @@ else()
     list(APPEND OPTIONS -Dlibmount=disabled)
 endif()
 
+# ---------------------------------------------------------------------------
+# Android arm64 meson 交叉编译修复
+#
+# 背景：vcpkg 的 meson 交叉编译在 Android 上存在缺陷——构建系统生成 meson
+# 交叉文件所需的编译参数取自 `get_cmake_vars`（z_vcpkg_get_cmake_vars +
+# _vcpkg_adjust_flags），该流程无论 triplet 是否设置 ANDROID_ABI=arm64-v8a，
+# 都会回落 NDK 默认的 `--target=armv7-none-linux-androideabi21`（armv7/API21）。
+# 结果 glib 及其工具（gobject-query/gio/gtester…）全部按 32 位 ARM 编译、链接，
+# 而其它端口（libffi 走 autotools --host、pcre2 走 cmake）都正确产出了 arm64 静态库，
+# 于是在链接时报：
+#   ld.lld: error: .../libffi.a(...) is incompatible with armelf_linux_eabi
+#
+# 修复方案：仅对 arm64-android，在 vcpkg 生成的交叉文件之后追加一个补充 meson
+# 交叉文件（VCPKG_MESON_CROSS_FILE/…_DEBUG/…_RELEASE）。meson 对后出现的交叉文件
+# 取覆盖优先级：我们覆盖 [binaries] c/cpp 为 NDK 的 aarch64 编译器包装器（内嵌
+# target+sysroot），并覆盖 c_args/cpp_args 去掉错误的 --target=armv7，从而保证
+# glib 按 arm64 编译/链接，与 libffi/pcre2 一致。其余二进制/属性/host_machine 仍
+# 复用 vcpkg 生成的交叉文件。
+if(VCPKG_TARGET_IS_ANDROID AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
+    if(DEFINED ENV{ANDROID_NDK_HOME} AND EXISTS "$ENV{ANDROID_NDK_HOME}")
+        set(_glib_ndk_root "$ENV{ANDROID_NDK_HOME}")
+    elseif(DEFINED VCPKG_ANDROID_NDK AND EXISTS "${VCPKG_ANDROID_NDK}")
+        set(_glib_ndk_root "${VCPKG_ANDROID_NDK}")
+    else()
+        set(_glib_ndk_root "")
+    endif()
+    if(_glib_ndk_root)
+        if(CMAKE_HOST_APPLE)
+            if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+                set(_glib_host_dir "darwin-arm64")
+            else()
+                set(_glib_host_dir "darwin-x86_64")
+            endif()
+        elseif(CMAKE_HOST_WIN32)
+            set(_glib_host_dir "windows-x86_64")
+        else()
+            set(_glib_host_dir "linux-x86_64")
+        endif()
+        set(_glib_api "${VCPKG_ANDROID_PLATFORM}")
+        if(NOT _glib_api)
+            set(_glib_api "24")
+        endif()
+        set(_glib_bin "${_glib_ndk_root}/toolchains/llvm/prebuilt/${_glib_host_dir}/bin")
+        set(_glib_sysroot "${_glib_ndk_root}/toolchains/llvm/prebuilt/${_glib_host_dir}/sysroot")
+        set(_glib_target "aarch64-linux-android${_glib_api}")
+        set(_glib_c_wrap "${_glib_bin}/aarch64-linux-android${_glib_api}-clang")
+        set(_glib_cpp_wrap "${_glib_bin}/aarch64-linux-android${_glib_api}-clang++")
+        if(EXISTS "${_glib_c_wrap}" AND EXISTS "${_glib_cpp_wrap}")
+            # NDK 多架构包装器：内嵌 --target 与 --sysroot，最稳
+            set(_glib_cc_line "c = ['${_glib_c_wrap}']\ncpp = ['${_glib_cpp_wrap}']")
+        else()
+            # 退路：通用 clang + 显式 target/sysroot/isystem
+            set(_glib_cc_line "c = ['${_glib_bin}/clang', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']\ncpp = ['${_glib_bin}/clang++', '--target=${_glib_target}', '--sysroot=${_glib_sysroot}', '-isystem', '${_glib_sysroot}/usr/include/aarch64-linux-android']")
+        endif()
+        if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
+            set(_glib_cross_dbg "${CURRENT_BUILDTREES_DIR}/meson-cross-arm64-android-dbg.ini")
+            file(WRITE "${_glib_cross_dbg}" "[binaries]\n${_glib_cc_line}\n\n[built-in options]\nc_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\ncpp_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\n")
+            set(VCPKG_MESON_CROSS_FILE_DEBUG "${_glib_cross_dbg}")
+        endif()
+        if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "release")
+            set(_glib_cross_rel "${CURRENT_BUILDTREES_DIR}/meson-cross-arm64-android-rel.ini")
+            file(WRITE "${_glib_cross_rel}" "[binaries]\n${_glib_cc_line}\n\n[built-in options]\nc_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\ncpp_args = ['-fPIC', '-g', '-DANDROID', '-D_FILE_OFFSET_BITS=64']\n")
+            set(VCPKG_MESON_CROSS_FILE "${_glib_cross_rel}")
+            set(VCPKG_MESON_CROSS_FILE_RELEASE "${_glib_cross_rel}")
+        endif()
+        message(STATUS "glib: android arm64 meson cross override -> ${_glib_cross_rel}")
+    endif()
+endif()
+
 vcpkg_list(SET ADDITIONAL_BINARIES)
 if(VCPKG_HOST_IS_WINDOWS)
     # Presence of bash and sh enables installation of auxiliary components.

@@ -93,7 +93,7 @@ jobs:
           path: ~/.cache/vcpkg
           key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
 
-      - name: Package .app
+      - name: Package unsigned .ipa
         run: |
           APP="apps/flutter_app/build/ios/iphoneos/Runner.app"
           if [ ! -d "$APP" ]; then
@@ -101,16 +101,22 @@ jobs:
             find apps/flutter_app/build/ios -maxdepth 3 -name "*.app" 2>/dev/null || true
             exit 1
           fi
-          ZIP="KrKr2-Next-iOS-${BUILD_TYPE}.zip"
-          ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
-          echo "已生成: $ZIP"
-          ls -lh "$ZIP"
-          echo "artifact=$ZIP" >> "$GITHUB_ENV"
+          # build.sh ios 本身走 --no-codesign（日志可见 "codesigning disabled"），
+          # 这里把未签名的 .app 按标准结构打包成 Payload/xxx.app 的无签名 .ipa，
+          # 便于 AltStore / Sideloadly 等侧载工具后续自定义签名安装。
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          IPA="KrKr2-Next-iOS-${BUILD_TYPE}-nosign.ipa"
+          zip -qry "$IPA" Payload/
+          echo "已生成(未签名): $IPA"
+          ls -lh "$IPA"
+          echo "artifact=$IPA" >> "$GITHUB_ENV"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KrKr2-Next-iOS-${{ env.BUILD_TYPE }}
+          name: KrKr2-Next-iOS-${{ env.BUILD_TYPE }}-nosign
           path: ${{ env.artifact }}
           if-no-files-found: error
           retention-days: 14
