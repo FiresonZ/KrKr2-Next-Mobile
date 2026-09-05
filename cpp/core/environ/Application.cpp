@@ -352,6 +352,22 @@ bool tTVPApplication::StartApplication(ttstr path) {
         spdlog::default_logger()->flush();
         TVPSystemInit();
 
+        // 确保 savedata 目录存在（iOS 沙盒首次启动常缺失该目录，脚本 checkSave
+        // 写 savedata/savecheck 时因父目录不存在报
+        //   Cannot open storage .../savedata/savecheck
+        // 而在启动脚本(TVPInitializeStartupScript)运行之前先建好，避免存档弹窗。
+        {
+            ttstr nativeDataPath = TVPNativeDataPath;
+            try {
+                TVPGetLocalName(nativeDataPath); // virtual(file://./...) -> native
+                if(!nativeDataPath.IsEmpty())
+                    TVPCreateFolders(nativeDataPath);
+            } catch(...) {
+                spdlog::warn("StartApplication: failed to ensure savedata dir={}",
+                             nativeDataPath.AsNarrowStdString());
+            }
+        }
+
         if(TVPCheckAbout())
             return true; // version information dialog box;
 
