@@ -235,6 +235,12 @@ install(DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/src/"
     FILES_MATCHING PATTERN "*.h" PATTERN "*.inc"
 )
 
+# src/*-private.h（如 gdiplus-private.h）会 #include "config.h"（相对同目录查找），
+# 因此生成的 config.h 必须一并安装，否则消费方（如 layerex_draw 插件）编译报找不到 config.h
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/config.h"
+    DESTINATION "include/libgdiplus"
+)
+
 install(
     TARGETS libgdiplus
     EXPORT libgdiplus-config
