@@ -539,7 +539,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     leading: const Icon(Icons.person_outline),
                     title: Text(l10n.aboutAuthor),
                     trailing: Text(
-                      'reAAAq',
+                      'FiresonZ',
                       style: TextStyle(
                         color: colorScheme.primary,
                         fontWeight: FontWeight.w600,
@@ -574,7 +574,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     leading: const Icon(Icons.code),
                     title: const Text('GitHub'),
                     subtitle: const Text(
-                      'github.com/reAAAq/KrKr2-Next',
+                      'github.com/FiresonZ/KrKr2-Next-Mobile',
                       style: TextStyle(fontSize: 12),
                     ),
                     trailing: Icon(
@@ -584,7 +584,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     onTap: () {
                       launchUrl(
-                        Uri.parse('https://github.com/reAAAq/KrKr2-Next'),
+                        Uri.parse('https://github.com/FiresonZ/KrKr2-Next-Mobile'),
                         mode: LaunchMode.externalApplication,
                       );
                     },
