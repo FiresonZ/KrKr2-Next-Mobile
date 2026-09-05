@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'KrKr2 Next';
+  String get appTitle => 'KrKr2 Next Mobile';
 
   @override
   String get settings => 'Settings';

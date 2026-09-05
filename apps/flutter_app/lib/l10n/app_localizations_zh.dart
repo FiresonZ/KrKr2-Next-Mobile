@@ -9,7 +9,7 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get appTitle => 'KrKr2 Next';
+  String get appTitle => 'KrKr2 Next Mobile';
 
   @override
   String get settings => '设置';

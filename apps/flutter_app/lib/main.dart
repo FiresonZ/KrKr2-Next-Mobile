@@ -83,7 +83,7 @@ class _Krkr2AppState extends State<Krkr2App> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'KrKr2 Next',
+      title: 'KrKr2 Next Mobile',
       debugShowCheckedModeBanner: false,
       locale: _locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
