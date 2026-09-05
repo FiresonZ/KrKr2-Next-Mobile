@@ -56,10 +56,10 @@ cmake --preset "Linux Debug Config" && cmake --build --preset "Linux Debug Build
 | iOS 构建 + CI 打包 | ✅ 可出包（Live2D 条件编译修复后） |
 | Android 恢复（triplet/preset/JNI/Kotlin 插件/壳层） | ✅ 代码就绪，**尚未真机验证** |
 | Linux 引擎核心验证 CI（engine_verify.yml） | ✅ 首次绿灯（新增 Linux 宿主平台实现 platform_linux.cpp 等 11 项修复） |
-| SIMD 公式缺陷修复 | ✅ 已修，**待 SIMD on/off 逐像素比对**（可在 Windows/Linux 上做） |
+| SIMD 公式缺陷修复 | ✅ 已修，**逐像素比对验证中**（tests/tvpgl_simd_compare，挂 ctest） |
 | 构建提速 | ✅ 已删 bullet3、catch2 移动端，CI 加 ccache |
-| 测试基建 | ❌ 尚无 C++ 测试（tests/ 不存在），Linux CI 已预留 ctest 入口 |
+| 测试基建 | ✅ 已建 SIMD 比对测试 tests/tvpgl_simd_compare（标量 `*_c` vs SIMD `_hwy`，挂 ctest） |
 
 ## 建议的下一步
 
-1. ~~跑通 Linux engine_verify CI（修首次编译问题）~~ ✅ 已绿灯 → 2. 写 SIMD 比对测试挂 Linux CI → 3. Android 真机验证（用户有安卓手机）→ 4. iOS 产物在 iPhone 6s 验证 → 5. 真机问题修复后进入游戏兼容性测试（docs/dev/compatibility.md）。
+1. ~~跑通 Linux engine_verify CI（修首次编译问题）~~ ✅ 已绿灯 → 2. ~~写 SIMD 比对测试挂 Linux CI~~ ✅ tests/tvpgl_simd_compare → 3. Android 真机验证（用户有安卓手机）→ 4. iOS 产物在 iPhone 6s 验证 → 5. 真机问题修复后进入游戏兼容性测试（docs/dev/compatibility.md）。
