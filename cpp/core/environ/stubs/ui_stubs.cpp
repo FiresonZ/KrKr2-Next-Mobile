@@ -399,6 +399,26 @@ public:
         glUseProgram(0);
         glBindTexture(GL_TEXTURE_2D, 0);
 
+        // 诊断（低频）：blit 全屏 quad 后立刻读当前绑定 FBO（IOSurface fbo2）中心像素
+        //  + glGetError，区分「blit 绘制没写进 fbo2」还是「写进去了但 IOSurface 层未落地」。
+        // 中心像素非黑 -> blit 写入成功，问题在 IOSurface/Flutter 落地与同步；
+        // 中心像素黑   -> blit 全屏 quad 绘制本身失败（shader/uniform/状态）。
+        if (s_blitDbg % 30 == 1) {
+            GLenum postErr = glGetError();
+            unsigned char dbgPx[4] = {0, 0, 0, 0};
+            GLint dbgFbo = 0;
+            glGetIntegerv(GL_FRAMEBUFFER_BINDING, &dbgFbo);
+            if (fbW > 0 && fbH > 0) {
+                glReadPixels(static_cast<GLint>(fbW / 2), static_cast<GLint>(fbH / 2),
+                             1, 1, GL_RGBA, GL_UNSIGNED_BYTE, dbgPx);
+            }
+            spdlog::info(
+                "FlutterWindowLayer::PostBlit: err=0x{:x} curFbo={} size={}x{} center=({},{},{},{})",
+                static_cast<unsigned>(postErr), dbgFbo,
+                static_cast<unsigned>(fbW), static_cast<unsigned>(fbH),
+                dbgPx[0], dbgPx[1], dbgPx[2], dbgPx[3]);
+        }
+
         if (g_postDrawHook) g_postDrawHook();
 
         // In IOSurface/WindowSurface mode, glFlush() is sufficient —
