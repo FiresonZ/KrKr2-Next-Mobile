@@ -29,6 +29,10 @@ set(ENVIRON_SOURCE_FILES
     # Stub implementations are in stubs/ui_stubs.cpp
     ${ENVIRON_PATH}/stubs/ui_stubs.cpp
 
+    # Linux 宿主平台实现（CI 引擎核心验证用）。文件体有 #if defined(__linux__)
+    # 守卫，在 Apple/Android 上为空翻译单元，不影响各平台原生实现。
+    ${ENVIRON_PATH}/stubs/platform_linux.cpp
+
     ${ENVIRON_PATH}/win32/SystemControl.cpp
 )
 
