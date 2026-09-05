@@ -28,7 +28,11 @@ if(VCPKG_TARGET_IS_MINGW)
         string(APPEND OPTIONS " --target-os=mingw64")
     endif()
 elseif(VCPKG_TARGET_IS_LINUX)
-    string(APPEND OPTIONS " --target-os=linux --enable-pthreads")
+    # --disable-x86asm：Linux x86_64 上的 ffmpeg 手写 x86 汇编（vc1dsp_mmx/h264_intrapred 等）
+    # 对全局表用的是非 PIC 的 R_X86_64_PC32 重定位，而本工程在 Linux 上把引擎编成共享库
+    # libengine_api.so，链接会报 "can not be used when making a shared object"。禁用 asm 走
+    # 纯 C 回退（配合 --enable-pic）即可。仅宿主验证受影响，arm64 目标（iOS/Android/macOS）无此问题。
+    string(APPEND OPTIONS " --target-os=linux --enable-pthreads --disable-x86asm")
 elseif(VCPKG_TARGET_IS_UWP)
     string(APPEND OPTIONS " --target-os=win32 --enable-w32threads --enable-d3d11va")
 elseif(VCPKG_TARGET_IS_WINDOWS)
