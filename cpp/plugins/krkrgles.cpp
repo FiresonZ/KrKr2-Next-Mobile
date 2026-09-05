@@ -33,13 +33,15 @@
 
 #define NCB_MODULE_NAME TJS_W("krkrgles.dll")
 
-// Live2D model's internal FBO — published by krkrlive2d.cpp
+#ifdef KRKR2_LIVE2D
+// Live2D model's internal FBO — published by krkrlive2d.cpp (仅 SDK 存在时编译)
 struct Live2DRenderTarget {
     GLuint fbo;
     GLsizei width;
     GLsizei height;
 };
 extern Live2DRenderTarget g_live2dRenderTarget;
+#endif
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1426,11 +1428,14 @@ public:
                 GLint prevFbo = s->fbo_.GetPrevFbo();
                 CopyFBOToLayer(s->fbo_.GetFBO(), s->fbo_.GetWidth(),
                                s->fbo_.GetHeight(), layer, prevFbo);
-            } else if (g_live2dRenderTarget.fbo) {
+            }
+#ifdef KRKR2_LIVE2D
+            else if (g_live2dRenderTarget.fbo) {
                 CopyFBOToLayer(g_live2dRenderTarget.fbo,
                                g_live2dRenderTarget.width,
                                g_live2dRenderTarget.height, layer, -1);
             }
+#endif
         }
         if (r) *r = true; return TJS_S_OK;
     }
