@@ -83,39 +83,55 @@ static void CompareOpa(const char *name, OpaFn scalarFn, OpaFn simdFn) {
     }
 }
 
-// 覆盖 conventions §9 高危/中危类别
+// ---------------------------------------------------------------------------
+// “标量参照”＝生产路径真正使用的标量＝TVPGL_C_Init() 派发的函数指针。
+// C_Init 用 SET_BLEND_*_FUNCTIONS 让指针指向 blend_function.cpp 的 functor，
+// 并非一律等于 tvpgl.cpp 的 *_c（例：PsOverlay/HardLight → TVP_ps_overlay/hard_light，
+// 与 TVPPs*Blend_c 不同）。故比较对象应为“生产标量(C_Init 后)” vs
+// “SIMD(C_Init+SIMD_Init 后)”，即同一条生产路径开/关 SIMD 的输出差异。
+// 捕获时机：C_Init 之后、SIMD_Init 之前。
+// ---------------------------------------------------------------------------
+static PlainFn s_SubBlend, s_SubBlend_HDA, s_ScreenBlend, s_ScreenBlend_HDA,
+    s_AddAlpha, s_AddAlpha_HDA;
+static OpaFn s_SubBlend_o, s_SubBlend_HDA_o, s_ScreenBlend_o, s_ScreenBlend_HDA_o,
+    s_AddAlpha_o, s_AddAlpha_HDA_o;
+static PlainFn s_PsAlpha, s_PsAdd, s_PsSub, s_PsMul, s_PsScreen, s_PsOverlay,
+    s_PsHardLight, s_PsLighten, s_PsDarken, s_PsDiff, s_PsExclusion;
+static OpaFn s_PsAlpha_o, s_PsAdd_o, s_PsSub_o, s_PsMul_o, s_PsScreen_o,
+    s_PsOverlay_o, s_PsHardLight_o, s_PsLighten_o, s_PsDarken_o, s_PsDiff_o,
+    s_PsExclusion_o;
+
+// 覆盖 conventions §9 高危/中危类别；scalar 参照一律用捕获的生产标量
 static void RunSubBlendFamily() {
-    ComparePlain("SubBlend", &TVPSubBlend_c, TVPSubBlend);
-    ComparePlain("SubBlend_HDA", &TVPSubBlend_HDA_c, TVPSubBlend_HDA);
-    CompareOpa("SubBlend_o", &TVPSubBlend_o_c, TVPSubBlend_o);
-    CompareOpa("SubBlend_HDA_o", &TVPSubBlend_HDA_o_c, TVPSubBlend_HDA_o);
+    ComparePlain("SubBlend", s_SubBlend, TVPSubBlend);
+    ComparePlain("SubBlend_HDA", s_SubBlend_HDA, TVPSubBlend_HDA);
+    CompareOpa("SubBlend_o", s_SubBlend_o, TVPSubBlend_o);
+    CompareOpa("SubBlend_HDA_o", s_SubBlend_HDA_o, TVPSubBlend_HDA_o);
 }
 
 static void RunScreenBlendFamily() {
-    ComparePlain("ScreenBlend", &TVPScreenBlend_c, TVPScreenBlend);
-    ComparePlain("ScreenBlend_HDA", &TVPScreenBlend_HDA_c, TVPScreenBlend_HDA);
-    CompareOpa("ScreenBlend_o", &TVPScreenBlend_o_c, TVPScreenBlend_o);
-    CompareOpa("ScreenBlend_HDA_o", &TVPScreenBlend_HDA_o_c, TVPScreenBlend_HDA_o);
+    ComparePlain("ScreenBlend", s_ScreenBlend, TVPScreenBlend);
+    ComparePlain("ScreenBlend_HDA", s_ScreenBlend_HDA, TVPScreenBlend_HDA);
+    CompareOpa("ScreenBlend_o", s_ScreenBlend_o, TVPScreenBlend_o);
+    CompareOpa("ScreenBlend_HDA_o", s_ScreenBlend_HDA_o, TVPScreenBlend_HDA_o);
 }
 
 static void RunAdditiveAlphaBlendFamily() {
-    ComparePlain("AdditiveAlphaBlend", &TVPAdditiveAlphaBlend_c, TVPAdditiveAlphaBlend);
-    ComparePlain("AdditiveAlphaBlend_HDA", &TVPAdditiveAlphaBlend_HDA_c, TVPAdditiveAlphaBlend_HDA);
-    CompareOpa("AdditiveAlphaBlend_o", &TVPAdditiveAlphaBlend_o_c, TVPAdditiveAlphaBlend_o);
-    CompareOpa("AdditiveAlphaBlend_HDA_o", &TVPAdditiveAlphaBlend_HDA_o_c, TVPAdditiveAlphaBlend_HDA_o);
+    ComparePlain("AdditiveAlphaBlend", s_AddAlpha, TVPAdditiveAlphaBlend);
+    ComparePlain("AdditiveAlphaBlend_HDA", s_AddAlpha_HDA, TVPAdditiveAlphaBlend_HDA);
+    CompareOpa("AdditiveAlphaBlend_o", s_AddAlpha_o, TVPAdditiveAlphaBlend_o);
+    CompareOpa("AdditiveAlphaBlend_HDA_o", s_AddAlpha_HDA_o, TVPAdditiveAlphaBlend_HDA_o);
 }
 
-// PS 混合：NORM 与 _o 两类（conventions §9 指出 NORM/_o 的 alpha 通道可能不一致）
+// PS 混合：NORM 与 _o 两类
 #define PS_COMPARE(NAME)                                                       \
     do {                                                                       \
-        ComparePlain("Ps" #NAME "Blend", &TVPPs##NAME##Blend_c,                \
-                     TVPPs##NAME##Blend);                                      \
-        CompareOpa("Ps" #NAME "Blend_o", &TVPPs##NAME##Blend_o_c,              \
+        ComparePlain("Ps" #NAME "Blend", s_Ps##NAME, TVPPs##NAME##Blend);      \
+        CompareOpa("Ps" #NAME "Blend_o", s_Ps##NAME##_o,                       \
                    TVPPs##NAME##Blend_o);                                      \
     } while (false)
 
 static void RunPsBlendFamilies() {
-    // 仅覆盖 TVPGL_SIMD_Init 真正注册了 SIMD 实现、且 conventions 归为 NORM/_o alpha 风险的模式
     PS_COMPARE(Alpha);
     PS_COMPARE(Add);
     PS_COMPARE(Sub);
@@ -130,8 +146,23 @@ static void RunPsBlendFamilies() {
 }
 
 int main() {
-    // 先按标量初始化，再把函数指针切到 SIMD（生产路径顺序：C_Init -> SIMD_Init）
+    // 生产顺序：先 C_Init（全部标量默认）→ 立刻捕获“生产标量”参照 → 再 SIMD_Init。
     TVPGL_C_Init();
+    s_SubBlend = TVPSubBlend;       s_SubBlend_HDA = TVPSubBlend_HDA;
+    s_SubBlend_o = TVPSubBlend_o;   s_SubBlend_HDA_o = TVPSubBlend_HDA_o;
+    s_ScreenBlend = TVPScreenBlend; s_ScreenBlend_HDA = TVPScreenBlend_HDA;
+    s_ScreenBlend_o = TVPScreenBlend_o; s_ScreenBlend_HDA_o = TVPScreenBlend_HDA_o;
+    s_AddAlpha = TVPAdditiveAlphaBlend; s_AddAlpha_HDA = TVPAdditiveAlphaBlend_HDA;
+    s_AddAlpha_o = TVPAdditiveAlphaBlend_o; s_AddAlpha_HDA_o = TVPAdditiveAlphaBlend_HDA_o;
+#define CAP_PS(NAME)                                                            \
+    do {                                                                        \
+        s_Ps##NAME = TVPPs##NAME##Blend;                                        \
+        s_Ps##NAME##_o = TVPPs##NAME##Blend_o;                                  \
+    } while (false)
+    CAP_PS(Alpha); CAP_PS(Add); CAP_PS(Sub); CAP_PS(Mul); CAP_PS(Screen);
+    CAP_PS(Overlay); CAP_PS(HardLight); CAP_PS(Lighten); CAP_PS(Darken);
+    CAP_PS(Diff); CAP_PS(Exclusion);
+#undef CAP_PS
     TVPGL_SIMD_Init();
 
     RunSubBlendFamily();
@@ -140,7 +171,7 @@ int main() {
     RunPsBlendFamilies();
 
     if (g_failures == 0) {
-        std::printf("tvpgl_simd_compare: ALL PASS (bit-exact scalar==simd)\n");
+        std::printf("tvpgl_simd_compare: ALL PASS (production-scalar == SIMD, bit-exact)\n");
         return 0;
     }
     std::printf("tvpgl_simd_compare: %d mismatches found\n", g_failures);
