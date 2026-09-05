@@ -56,6 +56,38 @@ endif()
 
 vcpkg_cmake_get_vars(cmake_vars_file)
 include("${cmake_vars_file}")
+
+# Android arm64：get_vars 在 arm64-android 会错推成 armv7（与 glib/meson 同根因），
+# 导致 --cc/--cxx 指向 32 位编译器、产出 incompatible with aarch64linux。
+# 这里直接用 NDK 的 aarch64 包装器覆盖 VCPKG_DETECTED_*，使下方 --cc/--cxx/--ar
+# 组装用到 aarch64 工具链。非 Android 分支完全不受影响。
+if(VCPKG_TARGET_IS_ANDROID AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
+    if(DEFINED VCPKG_ANDROID_NDK)
+        set(_ffmpeg_ndk "${VCPKG_ANDROID_NDK}")
+    elseif(DEFINED ENV{ANDROID_NDK_HOME})
+        set(_ffmpeg_ndk "$ENV{ANDROID_NDK_HOME}")
+    else()
+        message(FATAL_ERROR "ffmpeg(android): 未设置 ANDROID_NDK_HOME / VCPKG_ANDROID_NDK")
+    endif()
+    file(GLOB _ffmpeg_prebuilt DIRECTORIES "${_ffmpeg_ndk}/toolchains/llvm/prebuilt/*")
+    if(NOT _ffmpeg_prebuilt)
+        message(FATAL_ERROR "ffmpeg(android): 找不到 NDK 预编译工具链目录")
+    endif()
+    list(GET _ffmpeg_prebuilt 0 _ffmpeg_prebuilt_dir)
+    set(_ffmpeg_api "${VCPKG_ANDROID_PLATFORM}")
+    if(NOT _ffmpeg_api)
+        set(_ffmpeg_api "24")
+    endif()
+    set(_ffmpeg_bin    "${_ffmpeg_prebuilt_dir}/bin")
+    set(_ffmpeg_triple "aarch64-linux-android")
+    set(ENV{CC}    "${_ffmpeg_bin}/${_ffmpeg_triple}${_ffmpeg_api}-clang")
+    set(ENV{CXX}   "${_ffmpeg_bin}/${_ffmpeg_triple}${_ffmpeg_api}-clang++")
+    set(VCPKG_DETECTED_CMAKE_C_COMPILER   "${_ffmpeg_bin}/${_ffmpeg_triple}${_ffmpeg_api}-clang")
+    set(VCPKG_DETECTED_CMAKE_CXX_COMPILER "${_ffmpeg_bin}/${_ffmpeg_triple}${_ffmpeg_api}-clang++")
+    set(VCPKG_DETECTED_CMAKE_AR   "${_ffmpeg_bin}/llvm-ar")
+    set(VCPKG_DETECTED_CMAKE_NM   "${_ffmpeg_bin}/llvm-nm")
+    message(STATUS "ffmpeg: android arm64 override -> ${VCPKG_DETECTED_CMAKE_C_COMPILER}")
+endif()
 if(VCPKG_DETECTED_MSVC)
     string(APPEND OPTIONS " --disable-inline-asm") # clang-cl has inline assembly but this leads to undefined symbols.
     set(OPTIONS "--toolchain=msvc ${OPTIONS}")
