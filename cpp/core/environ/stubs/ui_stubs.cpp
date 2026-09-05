@@ -250,6 +250,46 @@ public:
             }
         }
 
+        // ── 诊断插桩（低频）：记录 blit 分支，并对 blit 源纹理抽样 ──
+        // 目的：区分黑屏（IOSurface 全黑）的根因归属。
+        //   SourceSample !黑 -> 引擎合成纹理有画面，黑屏在「blit 到 IOSurface」这步
+        //   SourceSample 全黑 -> 引擎 GL 合成本身没把画面画进源纹理。
+        static int s_blitDbg = 0;
+        if (s_blitDbg++ % 30 == 1) {
+            spdlog::info(
+                "FlutterWindowLayer::UpdateDrawBuffer: path={} nativeTex={} srcTex={} blitTex={} {}x{}",
+                nativeGLTex ? "GPU" : "CPU", nativeGLTex, blitSrcTexture,
+                blit_texture_, static_cast<unsigned>(tw), static_cast<unsigned>(th));
+            if (blitSrcTexture != 0) {
+                GLint prevFbo = 0;
+                glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+                GLuint dbgFbo = 0;
+                glGenFramebuffers(1, &dbgFbo);
+                glBindFramebuffer(GL_FRAMEBUFFER, dbgFbo);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                       GL_TEXTURE_2D, blitSrcTexture, 0);
+                if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+                    uint64_t sR=0, sG=0, sB=0, sA=0; int nonBlack=0;
+                    unsigned char px[4];
+                    for (int gy=0; gy<5; ++gy) for (int gx=0; gx<5; ++gx) {
+                        const int x=(int)((gx+0.5f)*static_cast<float>(tw)/5.0f);
+                        const int y=(int)((gy+0.5f)*static_cast<float>(th)/5.0f);
+                        px[0]=px[1]=px[2]=px[3]=0;
+                        glReadPixels(x,y,1,1,GL_RGBA,GL_UNSIGNED_BYTE,px);
+                        sR+=px[0]; sG+=px[1]; sB+=px[2]; sA+=px[3];
+                        if (px[0]>8 || px[1]>8 || px[2]>8) ++nonBlack;
+                    }
+                    spdlog::info("FlutterWindowLayer::SourceSample: nonBlack={}/25 avg=({},{},{},{})",
+                                 nonBlack, (int)(sR/25),(int)(sG/25),(int)(sB/25),(int)(sA/25));
+                } else {
+                    spdlog::warn("FlutterWindowLayer::SourceSample: FBO incomplete 0x{:x}",
+                                 glCheckFramebufferStatus(GL_FRAMEBUFFER));
+                }
+                glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
+                glDeleteFramebuffers(1, &dbgFbo);
+            }
+        }
+
         // ── Phase 2: Bind IOSurface render target and blit ───────
         // Now that the source texture is ready, switch to the
         // IOSurface FBO (or Pbuffer) for the actual blit output.
