@@ -389,6 +389,12 @@ bool tTVPApplication::StartApplication(ttstr path) {
 
         TVPAutoMountSiblingXP3Archives();
 
+        // 挂载工程目录自身的 *.xp3（data.xp3/scenario.xp3 等）。
+        // TVPAutoMountSiblingXP3Archives 只扫父目录，游戏文件夹内的 xp3 从未被挂载，
+        // 这是打包版游戏启动不了的根因；必须在 TVPInitializeStartupScript 之前挂载，
+        // 否则 startup.tjs 在包内时 TVPSearchPlacedPath 找不到。
+        TVPAutoMountProjectXP3Archives();
+
         spdlog::debug("StartApplication: TVPInitializeStartupScript...");
         spdlog::default_logger()->flush();
         TVPInitializeStartupScript();
