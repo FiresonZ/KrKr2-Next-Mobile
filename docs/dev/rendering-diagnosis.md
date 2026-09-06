@@ -19,12 +19,20 @@
 
 探针由编译期宏 `KRKR_RENDER_PROBE` 控制，**默认 OFF**。
 
-方式一（推荐，改 CMake 选项）：
+方式〇（CI 打包，最省事）：iOS / Android 打包工作流的 **workflow_dispatch 手动触发**下
+就有专门的开关，每次运行单独勾选，不用改代码、不用碰 CMake：
+- `enable_render_probe=true` → 这次打包开启探针（默认 `false`）；
+- `log_level` → 单独选引擎日志级别（默认 `auto`=按构建类型：release→info、debug→debug）。
+- 排查黑屏：勾上探针 + `log_level=debug`（或 `trace`）跑一次，抓日志即可，测完恢复默认。
+
+方式一（本地构建，推荐，改 CMake 选项）：
 ```bash
 cmake -DENABLE_RENDER_PROBE=ON <其余参数>          # 打开
 cmake -DENABLE_RENDER_PROBE=OFF <其余参数>         # 关闭（默认）
+cmake -DKRKR_LOG_LEVEL=debug <其余参数>            # 单独指定日志级别(trace|debug|info|warn|err|critical|off)
 ```
-（在 [CMakeLists.txt](../../CMakeLists.txt) 顶层 `add_compile_definitions(KRKR_RENDER_PROBE)`。）
+（在 [CMakeLists.txt](../../CMakeLists.txt) 顶层 `add_compile_definitions(KRKR_RENDER_PROBE)`；
+日志级别经 `KRKR_LOG_LEVEL_NUM` 注入 engine_api.cpp，可独立于 debug/release。）
 
 方式二（临时，直接在某处全局定义）：
 ```c

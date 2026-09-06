@@ -214,9 +214,19 @@ void EnsureInternalPluginAnchorsLinked() {
 
 void EnsureRuntimeLoggersInitialized() {
   std::call_once(g_loggers_init_once, []() {
-    // Release 默认 info：避免大量 [debug] 日志（如 storage 路径探测）刷爆日志文件。
-    // Debug 构建保持 verbose，方便开发排查。现场如遇疑难可临时 #define debug。
-#if defined(NDEBUG)
+    // 日志级别选择优先级：
+    //   1. 编译期显式指定 KRKR_LOG_LEVEL_NUM（由 CMake 的 KRKR_LOG_LEVEL 传入，
+    //      CI/命令行可独立于 debug/release 单独选级别，见 CMakeLists.txt）。
+    //   2. 否则按构建类型自动：Release→info，Debug→debug。
+    // Release 默认 info：避免大量 [debug] 日志（如 storage 路径探测）刷爆日志文件；
+    // Debug 构建保持 verbose，方便开发排查。
+#if defined(KRKR_LOG_LEVEL_NUM)
+    const auto krkr_level =
+        static_cast<spdlog::level::level_enum>(KRKR_LOG_LEVEL_NUM);
+    spdlog::set_level(krkr_level);
+    // 关键日志即时落盘；off(=6) 时 flush_on 亦为 off，日志仍会正常写入（由 sink 落盘）
+    spdlog::flush_on(krkr_level);
+#elif defined(NDEBUG)
     spdlog::set_level(spdlog::level::info);
     // 重要日志即时落盘
     spdlog::flush_on(spdlog::level::info);
