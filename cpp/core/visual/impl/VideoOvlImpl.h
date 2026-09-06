@@ -11,6 +11,7 @@
 #ifndef VideoOvlImplH
 #define VideoOvlImplH
 //---------------------------------------------------------------------------
+#include <string>
 #include "tjsNative.h"
 #include "WindowIntf.h"
 
@@ -69,6 +70,10 @@ public:
     tjs_error Construct(tjs_int numparams, tTJSVariant **param,
                         iTJSDispatch2 *tjs_obj) override;
     void Invalidate() override;
+
+public:
+    // 诊断：汇总所有 video overlay 的播放状态（黑屏探针用）。
+    static std::string DumpDebugStats();
 
 public:
     void Open(const ttstr &name);

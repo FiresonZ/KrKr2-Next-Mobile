@@ -28,8 +28,12 @@
 #include "RenderManager.h"
 #include "krkr_egl_context.h"
 #include "SysInitImpl.h"
+#include "VideoOvlImpl.h"
 
 #include <GLES3/gl3.h>
+
+// 全局图层对象计数（诊断用，区分「引擎没建图层/没东西画」与「画了但没进源纹理」）
+extern tjs_int TVPGetLayerCount();
 
 // ---------------------------------------------------------------------------
 // Live2D post-draw hook — called after scene blit in UpdateDrawBuffer
@@ -37,8 +41,14 @@
 static void (*g_postDrawHook)() = nullptr;
 void TVPSetPostDrawHook(void (*hook)()) { g_postDrawHook = hook; }
 
-// 全局图层对象计数（诊断用，区分「引擎没建图层/没东西画」与「画了但没进源纹理」）
-extern tjs_int TVPGetLayerCount();
+// ---------------------------------------------------------------------------
+// 黑屏探针状态：连续若干次采样显示「引擎在画 + blit 源纹理全黑」时，判定为
+// 黑屏持久化，并输出诊断（含视频 overlay 是否在播，用于验证 krmovie Present
+// 是否被 stub 阻塞)。
+// ---------------------------------------------------------------------------
+static int s_blackSampleCount = 0;      // 连续「黑且有绘制」的采样次数
+static bool s_blackReported = false;    // 本段黑屏是否已上报
+static const int kBlackReportThreshold = 3;
 
 // ---------------------------------------------------------------------------
 // FlutterWindowLayer — concrete iWindowLayer for Flutter host mode.
@@ -305,6 +315,26 @@ public:
                 }
                 glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
                 glDeleteFramebuffers(1, &dbgFbo);
+            }
+
+            // ── 黑屏探针 ─────────────────────────────────────────────
+            // 判定：引擎在持续绘制(engDraw>0) 但 blit 源纹理采样全黑(nonBlack==0)。
+            // 连续 kBlackReportThreshold 次出现即判定黑屏已持久化，上报：
+            //   1) 视频 overlay 是否在播（验证 krmovie Present stub 阻塞假设）；
+            //   2) 引擎当前绘制计数与图层数，供定位脚本/调度问题。
+            if (engDraw > 0 && nonBlack == 0) {
+                ++s_blackSampleCount;
+                if (s_blackSampleCount >= kBlackReportThreshold &&
+                    !s_blackReported) {
+                    s_blackReported = true;
+                    std::string ovl = tTJSNI_VideoOverlay::DumpDebugStats();
+                    spdlog::warn(
+                        "FlutterWindowLayer::BlackScreen: engine keeps drawing (draw={}, layers={}) but blit source is black. {}",
+                        engDraw, TVPGetLayerCount(), ovl);
+                }
+            } else {
+                s_blackSampleCount = 0;
+                s_blackReported = false;
             }
         }
 

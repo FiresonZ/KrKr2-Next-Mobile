@@ -31,6 +31,7 @@ Flutter 壳应用提供 UI。当前**面向移动端**（iOS + Android 为主目
 | [conventions.md](conventions.md) | 目录命名、平台约定、历史陷阱、SIMD 审计记录（重要） |
 | [compatibility.md](compatibility.md) | 游戏兼容性测试方法论（与 Z 持平目标的闭环流程） |
 | [perf-optimization.md](perf-optimization.md) | 性能优化与代码重构候选（收益/风险/验证方式） |
+| [todo.md](todo.md) | **待办 / 已知问题（AI Agent 协作队列，先看这里）** |
 
 ## 极简速览（TL;DR）
 
