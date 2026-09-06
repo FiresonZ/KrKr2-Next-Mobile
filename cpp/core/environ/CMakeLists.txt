@@ -33,6 +33,11 @@ set(ENVIRON_SOURCE_FILES
     # 守卫，在 Apple/Android 上为空翻译单元，不影响各平台原生实现。
     ${ENVIRON_PATH}/stubs/platform_linux.cpp
 
+    # Android 平台实现（文件体有 #if defined(__ANDROID__) 守卫）。
+    # 移动端 UI 由 Flutter 接管，其余平台函数(文件/时钟/内存/生命周期)与 Linux 同源，
+    # 具体见 android/platform_android.cpp。
+    ${ENVIRON_PATH}/android/platform_android.cpp
+
     ${ENVIRON_PATH}/win32/SystemControl.cpp
 )
 

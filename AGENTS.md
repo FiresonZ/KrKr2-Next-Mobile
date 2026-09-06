@@ -56,7 +56,7 @@ cmake --preset "Linux Debug Config" && cmake --build --preset "Linux Debug Build
 |---|---|
 | iOS 构建 + CI 打包 | ✅ 可出**无签名 IPA**（工作流直接装 `Payload/Runner.app` 打 nosign.ipa，供 AltStore/Sideloadly 侧载测试）；**已出测试版骨架，准备预发布** |
 | iOS 黑屏诊断 | 🔬 探针已加：`ui_stubs.cpp::UpdateDrawBuffer` 上报 `SourceSample/PostBlit/draw/BlackScreen`；真机日志已**排除视频**（`VideoOverlay total=0`），根因转向 **Z(krkrz) 插件兼容**（缺 drawdeviceD3DZ/kztouch/k2compat 等，主 DrawBuffer 从未被合成，源纹理保持初始黑），详见 [docs/dev/todo.md](docs/dev/todo.md) |
-| Android 恢复（triplet/preset/JNI/Kotlin 插件/壳层） | 🛠 已对齐上游做法：triplet 补 `VCPKG_CMAKE_CONFIGURE_OPTIONS -DANDROID_ABI=arm64-v8a`（根治 boost 等 CMake 端口 32 位错配）+ boost 组件改 CONFIG 直连（绕开 EXACT 版本转发）双保险；glib(meson) 仍走 overlay，**待 CI 全量重编后真机实测** |
+| Android 构建链路（triplet/preset/JNI/Kotlin 插件/壳层/平台层） | 🛠 已补全：triplet 全局 arm64 ABI 修复 + 去 engine_api `--whole-archive` + oboe(`find_library`)+ 新增 **Android 平台实现** `environ/android/platform_android.cpp`（文件/时钟/内存/生命周期/存储路径/`Android_Get*`），链接期 undefined symbol 已清零。构建链在 CI 逐个修复推进中 |
 | vcpkg meson × Android | ⚠️ 已知坑：`get_cmake_vars` 无论 triplet 的 `ANDROID_ABI=arm64-v8a` 都回落 `--target=armv7-none-linux-androideabi21`；cmake/autotools 端口现靠全局 `-DANDROID_ABI` 已正常，仅 meson 端口（如 glib）会与 arm64 库错配。修法见 `vcpkg/ports/glib/portfile.cmake` |
 | Linux 引擎核心验证 CI（engine_verify.yml） | ✅ 首次绿灯（新增 Linux 宿主平台实现 platform_linux.cpp 等 11 项修复） |
 | SIMD 公式缺陷修复 | ⚠️ 已回退保正确，修复列为待办：tests/tvpgl_simd_compare 逐像素比对证实 23 处 SIMD≠标量；PS 全系混合 / SubBlend_o / ScreenBlend 现指回 `*_c` 标量（`tvpgl_simd_init.cpp` 已注释对应注册），待逐模式修到与标量位级一致后放回 |
