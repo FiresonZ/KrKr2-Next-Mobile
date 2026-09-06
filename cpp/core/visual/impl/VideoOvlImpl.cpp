@@ -305,6 +305,20 @@ void tTJSNI_VideoOverlay::Open(const ttstr &_name) {
     CachedOverlayMode = Mode;
     if(Loop)
         VideoOverlay->SetLoopSegement(0, -1);
+
+    // 黑屏/启动诊断：记录脚本层打开的影片（模式 + 文件名），便于确认
+    // 开场动画/logo 影片是否在启动脚本中被 open 并随后停留在黑屏。
+    {
+        const tjs_char *mn = TJS_W("?");
+        switch(Mode) {
+            case vomOverlay: mn = TJS_W("overlay"); break;
+            case vomLayer:   mn = TJS_W("layer");   break;
+            case vomMixer:   mn = TJS_W("mixer");   break;
+            case vomMFEVR:   mn = TJS_W("mfeVR");   break;
+        }
+        TVPAddLog(TJS_W("(info) VideoOverlay.Open: mode=") + ttstr(mn) +
+                  TJS_W(" file=") + _name);
+    }
 }
 //---------------------------------------------------------------------------
 void tTJSNI_VideoOverlay::Close() {
