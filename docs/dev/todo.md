@@ -38,11 +38,24 @@
 - 参考：`cpp/core/visual/impl/VideoOvlImpl.cpp` 的 `EC_UPDATE` 处理与
   `iTVPVideoOverlay::PresentVideoImage` / `GetFrontBuffer` 契约。
 
-### 3. runtime-restart 不支持（退出后无法直接开另一个游戏）
+### 3. runtime-restart 不支持（退出后无法直接开另一个游戏）—— 参考上游 PR#12
 - 现象：首次开游戏正常；不杀进程、退出后再开另一款游戏报
   `Engine Error engine_open_game_async failed: result=-3, error=runtime restart is not supported yet`。
 - 已做：Dart 侧 `_exitGame` 现在先 `engineDestroy()` 等销毁完成再 `pop`。
-- 待办：真机验证该修复；若仍有问题，需支持引擎热重启或强制以新进程形态打开。
+- **上游参考（vcdlk PR#12「make runtime restartable after engine_destroy」,
+  reAAAq/KrKr2-Next，2026-06-16）**：此 PR 正是修"杀后台/无法重启"的根因。
+  病根是我们本地 [game_page.dart](apps/flutter_app/lib/pages/game_page.dart)：
+  `_exitGame()` 直接 `pop` 不完整释放；Retry 把 `engineDestroy()` 用 `unawaited()` 丢出、
+  立刻 `engineCreate()` → 引擎未销毁完就 recreate，全局状态残留 → 下次起不来，只能杀进程。
+- PR#12 的改法（纯 Dart）：
+  1. `_shutdownEngine()` 用 `_shutdownRequested` + `_shutdownFuture` 去重，严格 await 顺序：
+     `surface.release() → engineDestroy() → finalizePlaySession → restoreOrientation`。
+  2. `_autoStart()`/`_exitGame`/`_retryAutoStart` 全程检查 `_shutdownRequested`，
+     销毁未完就不再重新 create。
+  3. Retry 改走 `_retryAutoStart()`（完整 shutdown 后再重建 bridge + autoStart）。
+- 待办（真机阶段）：移植 PR#12 中 `game_page.dart` 的 shutdown 重构（只搬这段，不整体
+  cherry-pick——该 PR 还夹带 launch_args/归档/.gitignore/CMake `TVP_SOURCE_ROOT` 等噪声）。
+  移植后真机验证是否根治"杀后台/无法再开游戏"。若仍失败，再评估引擎热重启或新进程形态。
 
 ### 4. SIMD 公式逐模式修到位级一致（保正确回归）
 - 背景：`tests/tvpgl_simd_compare` 已证实 **23 处 SIMD ≠ 标量**；
