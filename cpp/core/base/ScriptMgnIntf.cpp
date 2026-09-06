@@ -500,12 +500,6 @@ void TVPInitScriptEngine() {
     registerObject(TJS_W("Storages"), TVPCreateNativeClass_Storages());
     registerObject(TJS_W("Plugins"), TVPCreateNativeClass_Plugins());
     registerObject(TJS_W("VideoOverlay"), TVPCreateNativeClass_VideoOverlay());
-    // krmovie 兼容：krmovie.dll 给脚本的 TJS 类名是 "MovieMedia"（KAG 开场/过场视频
-    // 用它 new MovieMedia() + open/play/wait）。本引擎已用同一套
-    // tTJSNI_VideoOverlay（基于 ffmpeg 播放器）实现了完整视频能力，这里把该类
-    // 同时注册为 "MovieMedia"，使脚本无需 krmovie.dll 也能 new MovieMedia()。
-    // 这样 Plugins.link("krmovie.dll") 即便不命中，MovieMedia 也始终可用。
-    registerObject(TJS_W("MovieMedia"), TVPCreateNativeClass_VideoOverlay());
     registerObject(TJS_W("Pad"), TVPCreateNativeClass_Pad());
     registerObject(TJS_W("Clipboard"), TVPCreateNativeClass_Clipboard());
     registerObject(TJS_W("Scripts"),
