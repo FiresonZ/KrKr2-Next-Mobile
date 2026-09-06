@@ -45,7 +45,7 @@ cmake --preset "Linux Debug Config" && cmake --build --preset "Linux Debug Build
 3. **SIMD（Highway）公式必须以 [tvpgl.cpp](cpp/core/visual/tvpgl.cpp) 的 `*_c` 标量为准**；高危公式缺陷（SubBlend/ScreenBlend_o/AdditiveAlphaBlend/PS alpha）已于 2026-09 修复，**待逐像素比对验证**（conventions §9）。
 4. **Live2D（cubism）按 SDK 是否存在于磁盘条件编译**（`cpp/plugins/CMakeLists.txt`）：`cubism/Framework` + `Core/lib` 被 gitignore，CI 上自动禁用 `krkrlive2d.cpp`；缺库是正常状态，不是 bug（conventions §4）。
 5. **vcpkg.json 的 angle 分平台**：Apple 用 `metal` feature，Android/Linux 用 `vulkan` feature，不可混用。
-6. **Android 引擎形态是自包含 `libengine_api.so`**（`-Wl,--whole-archive` 打包全部引擎目标，等价 iOS `-force_load`）；JNI 胶水在 `bridge/engine_api/src/engine_api_android_jni.cpp`。
+6. **Android 引擎形态是自包含 `libengine_api.so`**：插件子库（`krkr2plugin`/`psbfile`/`motionplayer`…）用 `target_sources(PUBLIC)`，其源码经 `INTERFACE_SOURCES` **直接编进 `engine_api.so`**，引擎以**普通链接** `krkr2core + krkr2plugin` 打包（对齐上游 reAAAq/KrKr2-Next）；**不要再加 `--whole-archive`**，否则会把 psbfile/motionplayer 的对象再拉一份，触发 ld.lld 重复符号；JNI 胶水在 `bridge/engine_api/src/engine_api_android_jni.cpp`。
 7. **`*.md` 已从 .gitignore 移除**，新增 md 文档正常 `git add`；`build/`（构建脚本目录）已反忽略（`!/build/`）。
 8. 改 vcpkg 依赖后 CI 的 vcpkg 缓存 key 会变，首次会全量重编（半小时级），属正常。
 9. **待办在 [docs/dev/todo.md](docs/dev/todo.md)**，动手前先看是否已有相关条目与黑屏探针结论。
