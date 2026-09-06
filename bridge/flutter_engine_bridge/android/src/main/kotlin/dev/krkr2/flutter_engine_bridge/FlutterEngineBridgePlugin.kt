@@ -57,7 +57,7 @@ class FlutterEngineBridgePlugin : FlutterPlugin, MethodCallHandler {
 
   override fun onMethodCall(call: MethodCall, result: Result) {
     when (call.method) {
-      "getPlatformVersion" -> result("Android ${Build.VERSION.RELEASE}")
+      "getPlatformVersion" -> result.success("Android ${Build.VERSION.RELEASE}")
 
       // --- Legacy RGBA readback (removed from the modern Android embedding) ---
       "createTexture", "updateTextureRgba", "disposeTexture", "notifyFrameAvailable" ->
@@ -82,13 +82,11 @@ class FlutterEngineBridgePlugin : FlutterPlugin, MethodCallHandler {
         surfaceProducers[textureId] = producer
         val surface = producer.getSurface()
         nativeSetSurface(surface, width, height)
-        result(
-          mapOf(
-            "textureId" to textureId,
-            "width" to width,
-            "height" to height,
-          ),
-        )
+        result.success(mapOf(
+          "textureId" to textureId,
+          "width" to width,
+          "height" to height,
+        ))
       }
 
       "resizeSurfaceTexture" -> {
@@ -107,13 +105,11 @@ class FlutterEngineBridgePlugin : FlutterPlugin, MethodCallHandler {
         producer.setSize(width, height)
         val surface = producer.getSurface()
         nativeSetSurface(surface, width, height)
-        result(
-          mapOf(
-            "textureId" to textureId,
-            "width" to width,
-            "height" to height,
-          ),
-        )
+        result.success(mapOf(
+          "textureId" to textureId,
+          "width" to width,
+          "height" to height,
+        ))
       }
 
       "disposeSurfaceTexture" -> {
@@ -123,7 +119,7 @@ class FlutterEngineBridgePlugin : FlutterPlugin, MethodCallHandler {
           nativeDetachSurface()
           producer.release()
         }
-        result(null)
+        result.success(null)
       }
 
       else -> result.notImplemented()
