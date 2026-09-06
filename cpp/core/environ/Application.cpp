@@ -357,14 +357,22 @@ bool tTVPApplication::StartApplication(ttstr path) {
         //   Cannot open storage .../savedata/savecheck
         // 而在启动脚本(TVPInitializeStartupScript)运行之前先建好，避免存档弹窗。
         {
-            ttstr nativeDataPath = TVPNativeDataPath;
-            try {
-                TVPGetLocalName(nativeDataPath); // virtual(file://./...) -> native
-                if(!nativeDataPath.IsEmpty())
-                    TVPCreateFolders(nativeDataPath);
-            } catch(...) {
-                spdlog::warn("StartApplication: failed to ensure savedata dir={}",
-                             nativeDataPath.AsNarrowStdString());
+            // TVPNativeDataPath 已是 *native* 路径（SysInitImpl::TVPEnsureDataPathDirectory
+            // 正是把它直接传给 TVPCheckExistentLocalFolder/TVPCreateFolders 用的），
+            // 不能再对它调 TVPGetLocalName（那期望 virtual/storage 路径如 file://...
+            // 传 native 会抛异常，导致目录没建成、脚本 checkSave 打开
+            // savedata/savecheck 时报 "Cannot open storage"）。
+            // TVPEnsureDataPathDirectory 在 TVPSystemInit 阶段跑过一次，但此时
+            // Documents/Games/<proj> 父目录往往尚未就绪而失败，且该函数带
+            // TVPDataPathDirectoryEnsured 标志只跑一次，这里在脚本运行前重试。
+            ttstr savedataDir = TVPNativeDataPath;
+            if(!savedataDir.IsEmpty()) {
+                try {
+                    TVPCreateFolders(savedataDir); // 递归创建（mkdir -p）
+                } catch(...) {
+                    spdlog::warn("StartApplication: failed to ensure savedata dir={}",
+                                 savedataDir.AsNarrowStdString());
+                }
             }
         }
 
