@@ -128,7 +128,11 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:include/tjs2/parser>
 )
 
-find_package(Boost COMPONENTS locale REQUIRED NO_MODULE)
+# 直接按 CONFIG 找 boost_locale，避开 vcpkg BoostConfig 的 EXACT 版本转发。
+# 原因：Android 上 vcpkg 生成的 boost_locale-config 版本串被误标成 "1.88.0 (32bit)"
+# （库本身是按 arm64 正确编译的，只是元数据后缀错误），find_package(Boost COMPONENTS locale)
+# 经由 BoostConfig 以 EXACT 1.88.0 转发时因后缀不匹配而失败。直接 CONFIG 不校验版本即可。
+find_package(boost_locale CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(oniguruma CONFIG REQUIRED)
