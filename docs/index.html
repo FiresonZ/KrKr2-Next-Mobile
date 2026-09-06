@@ -153,31 +153,55 @@
     </div>
   </section>
 
-  <section id="platform">
-    <h2>平台支持</h2>
-    <p class="sub">引擎以不同二进制形态接入 Flutter 壳。</p>
+  <section id="release">
+    <h2>发布状态</h2>
+    <p class="sub">iOS 测试版里程碑。当前处于预发布阶段。</p>
     <table>
       <thead>
-        <tr><th>平台</th><th>状态</th><th>图形后端</th><th>纹理共享</th><th>引擎形态</th></tr>
+        <tr><th>平台</th><th>状态</th><th>说明</th></tr>
       </thead>
       <tbody>
         <tr>
           <td>iOS</td>
-          <td class="s-wip">🚧 主目标 · 开发中</td>
+          <td class="s-wip">🔜 测试版 · 预发布</td>
+          <td>可构建<b>无签名 IPA</b>，经 AltStore / Sideloadly 侧载测试；存档目录已支持，开机能正常进游戏（黑屏问题以探针在排查中）</td>
+        </tr>
+        <tr>
+          <td>Android</td>
+          <td class="s-wip">🚧 构建恢复中</td>
+          <td>arm64 依赖（glib 等 meson 端口）交叉编译修复后即可出 APK</td>
+        </tr>
+        <tr>
+          <td>macOS</td>
+          <td class="s-ok">✅ 开发目标</td>
+          <td>Apple 平台开发/调试用</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="platform">
+    <h2>平台支持（技术形态）</h2>
+    <p class="sub">引擎以不同二进制形态接入 Flutter 壳。</p>
+    <table>
+      <thead>
+        <tr><th>平台</th><th>图形后端</th><th>纹理共享</th><th>引擎形态</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>iOS</td>
           <td>Metal</td>
           <td>IOSurface</td>
           <td>静态库链接进 Runner</td>
         </tr>
         <tr>
           <td>Android</td>
-          <td class="s-wip">🚧 主目标 · 开发中</td>
           <td>Vulkan</td>
           <td>SurfaceTexture</td>
           <td>libengine_api.so 打包进 APK</td>
         </tr>
         <tr>
           <td>macOS</td>
-          <td class="s-ok">✅ 开发目标</td>
           <td>Metal</td>
           <td>IOSurface</td>
           <td>dylib 打包进 Frameworks</td>

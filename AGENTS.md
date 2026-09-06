@@ -48,12 +48,14 @@ cmake --preset "Linux Debug Config" && cmake --build --preset "Linux Debug Build
 6. **Android 引擎形态是自包含 `libengine_api.so`**（`-Wl,--whole-archive` 打包全部引擎目标，等价 iOS `-force_load`）；JNI 胶水在 `bridge/engine_api/src/engine_api_android_jni.cpp`。
 7. **`*.md` 已从 .gitignore 移除**，新增 md 文档正常 `git add`；`build/`（构建脚本目录）已反忽略（`!/build/`）。
 8. 改 vcpkg 依赖后 CI 的 vcpkg 缓存 key 会变，首次会全量重编（半小时级），属正常。
+9. **待办在 [docs/dev/todo.md](docs/dev/todo.md)**，动手前先看是否已有相关条目与黑屏探针结论。
 
 ## 当前状态（2026-09）
 
 | 平台/模块 | 状态 |
 |---|---|
-| iOS 构建 + CI 打包 | ✅ 可出**无签名 IPA**（工作流直接装 `Payload/Runner.app` 打 nosign.ipa，供 AltStore/Sideloadly 侧载测试） |
+| iOS 构建 + CI 打包 | ✅ 可出**无签名 IPA**（工作流直接装 `Payload/Runner.app` 打 nosign.ipa，供 AltStore/Sideloadly 侧载测试）；**已出测试版骨架，准备预发布** |
+| iOS 黑屏诊断 | 🔬 探针已加：`ui_stubs.cpp::UpdateDrawBuffer` 上报 `SourceSample/PostBlit/draw/BlackScreen`（含 `VideoOverlay` 播放状态）；根因待真机日志确认（疑似 krmovie Present stub 阻塞） |
 | Android 恢复（triplet/preset/JNI/Kotlin 插件/壳层） | ⚠️ 构建中：glib(meson) 被 vcpkg 按 armv7 编译、与 arm64 库错配；已在 glib overlay 端口追加 arm64 meson 交叉文件强制 `aarch64` 编译+链接（含 c/cpp/c_ld/cpp_ld/c_link_args），**待 CI 验证后真机实测** |
 | vcpkg meson × Android | ⚠️ 已知坑：`get_cmake_vars` 无论 triplet 的 `ANDROID_ABI=arm64-v8a` 都回落 `--target=armv7-none-linux-androideabi21`；cmake/autotools 端口正常，仅 meson 端口（如 glib）会与 arm64 库错配。修法见 `vcpkg/ports/glib/portfile.cmake` |
 | Linux 引擎核心验证 CI（engine_verify.yml） | ✅ 首次绿灯（新增 Linux 宿主平台实现 platform_linux.cpp 等 11 项修复） |
@@ -67,6 +69,7 @@ cmake --preset "Linux Debug Config" && cmake --build --preset "Linux Debug Build
 2. ~~写 SIMD 比对测试挂 Linux CI~~ ✅ tests/tvpgl_simd_compare（已开跑，证实并定位 23 处 SIMD≠标量）
 3. ~~PS 全系 / SubBlend_o / ScreenBlend 先回退标量保正确~~ ✅（`tvpgl_simd_init.cpp`，修 SIMD 列待办）
 4. 重跑 Linux engine_verify CI，确认 ctest 全绿（回退后）
-5. 构 Android APK + iOS nosign IPA 真机实测（iOS 侧载；Android 待 glib arm64 meson 修复的 CI 验证）
-6. 逐模式修 SIMD 至位级一致（待办：PsApplyAlpha 舍入序 + SubBlend_o/ScreenBlend alpha + Overlay/HardLight 分支），tests 逐模式验证后放回
-7. 真机问题修复后进入游戏兼容性测试（docs/dev/compatibility.md）
+5. 读 iOS 真机日志，按 `BlackScreen` 探针结论决定是否先做 krmovie Present（详见 [docs/dev/todo.md](docs/dev/todo.md)）
+6. 构 Android APK + iOS nosign IPA 真机实测（iOS 侧载；Android 待 glib arm64 meson 修复的 CI 验证）
+7. 逐模式修 SIMD 至位级一致（待办：PsApplyAlpha 舍入序 + SubBlend_o/ScreenBlend alpha + Overlay/HardLight 分支），tests 逐模式验证后放回
+8. 真机问题修复后进入游戏兼容性测试（docs/dev/compatibility.md）

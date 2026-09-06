@@ -24,6 +24,8 @@
 #include "WaveImpl.h" // for DirectSound attenuate <-> TVP volume
 // #include <evcode.h>
 
+#include "CharacterSet.h"
+
 #include "Application.h"
 #include "combase.h"
 
@@ -78,6 +80,66 @@ static void TVPShutdownVideoOverlay() {
 static tTVPAtExit TVPShutdownVideoOverlayAtExit(TVP_ATEXIT_PRI_PREPARE,
                                                 TVPShutdownVideoOverlay);
 //---------------------------------------------------------------------------
+// 嵌套内部使用的状态名转换
+static const tjs_char *VideoStatusName(tTVPVideoStatus st) {
+    switch(st) {
+        case vsStopped:    return TJS_W("stopped");
+        case vsPlaying:    return TJS_W("playing");
+        case vsPaused:     return TJS_W("paused");
+        case vsProcessing: return TJS_W("processing");
+        case vsEnded:      return TJS_W("ended");
+        case vsReady:      return TJS_W("ready");
+        default:            return TJS_W("?");
+    }
+}
+static const tjs_char *VideoModeName(tTVPVideoOverlayMode m) {
+    switch(m) {
+        case vomOverlay: return TJS_W("overlay");
+        case vomLayer:   return TJS_W("layer");
+        case vomMixer:   return TJS_W("mixer");
+        case vomMFEVR:   return TJS_W("mfeVR");
+        default:          return TJS_W("?");
+    }
+}
+//---------------------------------------------------------------------------
+// tTJSNI_VideoOverlay::DumpDebugStats : 黑屏探针 — 汇总当前所有
+// video overlay 的播放状态（是否有 krmovie 在播、处于哪种模式）。
+std::string tTJSNI_VideoOverlay::DumpDebugStats() {
+    std::string out;
+    out.reserve(256);
+    size_t active = 0;
+    size_t playing = 0;
+    for(const auto *ovl : TVPVideoOverlayVector) {
+        if(!ovl)
+            continue;
+        tTVPVideoStatus st = vsStopped;
+        long vw = 0, vh = 0;
+        const bool hasDev = (ovl->VideoOverlay != nullptr);
+        if(hasDev) {
+            ovl->VideoOverlay->GetStatus(&st);
+            ovl->VideoOverlay->GetVideoSize(&vw, &vh);
+            active++;
+            if(st == vsPlaying)
+                playing++;
+        }
+        const tjs_char *modeName = VideoModeName(ovl->GetMode());
+        const tjs_char *stName = VideoStatusName(st);
+        char mbuf[64], sbuf[64];
+        mbuf[0] = sbuf[0] = 0;
+        TVPWideCharToUtf8String(modeName, mbuf);
+        TVPWideCharToUtf8String(stName, sbuf);
+        char line[256];
+        snprintf(line, sizeof(line), " [mode=%s dev=%s status=%s %ldx%ld]",
+                 mbuf, hasDev ? "yes" : "no", sbuf, (long)vw, (long)vh);
+        out += line;
+    }
+    char head[96];
+    snprintf(head, sizeof(head), "VideoOverlay: total=%u active=%u playing=%u",
+             (unsigned)TVPVideoOverlayVector.size(), (unsigned)active,
+             (unsigned)playing);
+    out.insert(0, head);
+    return out;
+}
 
 //---------------------------------------------------------------------------
 // tTJSNI_VideoOverlay
@@ -243,6 +305,20 @@ void tTJSNI_VideoOverlay::Open(const ttstr &_name) {
     CachedOverlayMode = Mode;
     if(Loop)
         VideoOverlay->SetLoopSegement(0, -1);
+
+    // 黑屏/启动诊断：记录脚本层打开的影片（模式 + 文件名），便于确认
+    // 开场动画/logo 影片是否在启动脚本中被 open 并随后停留在黑屏。
+    {
+        const tjs_char *mn = TJS_W("?");
+        switch(Mode) {
+            case vomOverlay: mn = TJS_W("overlay"); break;
+            case vomLayer:   mn = TJS_W("layer");   break;
+            case vomMixer:   mn = TJS_W("mixer");   break;
+            case vomMFEVR:   mn = TJS_W("mfeVR");   break;
+        }
+        TVPAddLog(TJS_W("(info) VideoOverlay.Open: mode=") + ttstr(mn) +
+                  TJS_W(" file=") + _name);
+    }
 }
 //---------------------------------------------------------------------------
 void tTJSNI_VideoOverlay::Close() {
