@@ -246,10 +246,28 @@ log_info "Running flutter pub get..."
 FLUTTER_BUILD_MODE="$BUILD_TYPE_LOWER"
 log_info "Building Flutter Android app ($FLUTTER_BUILD_MODE)..."
 
+# 版本号：优先 RELEASE_VERSION（工作流填写的发布版本号，X.Y.Z）；未填则回退读取
+# pubspec.yaml 的 version 字段。versionCode 要求整数，取 major*10000+minor*100+patch；
+# 版本号经 --dart-define=APP_VERSION 注入，供 settings 页展示实际版本号。
+VERSION_ARGS=()
+APP_VERSION="${RELEASE_VERSION:-}"
+if [[ -z "$APP_VERSION" ]]; then
+    APP_VERSION="$(sed -n 's/^version:[[:space:]]*\([0-9][0-9.]*\)[+0-9]*[[:space:]]*$/\1/p' \
+        "$FLUTTER_APP_DIR/pubspec.yaml" | head -n1)"
+fi
+if [[ -n "$APP_VERSION" ]]; then
+    IFS=. read -r v_major v_minor v_patch <<< "$APP_VERSION"
+    v_major=${v_major:-0}; v_minor=${v_minor:-0}; v_patch=${v_patch:-0}
+    BUILDNUM=$(( v_major*10000 + v_minor*100 + v_patch ))
+    VERSION_ARGS=(--build-name="$APP_VERSION" --build-number="$BUILDNUM" \
+        --dart-define=APP_VERSION="$APP_VERSION")
+    log_info "App version: $APP_VERSION (build $BUILDNUM)"
+fi
+
 if [[ "$FLUTTER_BUILD_MODE" == "release" ]]; then
-    (cd "$FLUTTER_APP_DIR" && "$FLUTTER_BIN" build apk --release)
+    (cd "$FLUTTER_APP_DIR" && "$FLUTTER_BIN" build apk --release "${VERSION_ARGS[@]}")
 else
-    (cd "$FLUTTER_APP_DIR" && "$FLUTTER_BIN" build apk --debug)
+    (cd "$FLUTTER_APP_DIR" && "$FLUTTER_BIN" build apk --debug "${VERSION_ARGS[@]}")
 fi
 
 # ============================================================

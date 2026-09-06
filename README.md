@@ -117,6 +117,38 @@ C++ 引擎 (cpp/core, TJS2) ──engine_api C ABI──> Dart FFI (flutter_engi
 **首次构建**：vcpkg 需全量编译目标平台依赖（FFmpeg/OpenCV/ANGLE 等），耗时较长；
 已启用 vcpkg 二进制缓存，后续运行秒级还原。
 
+## CI 发布/版本号标准
+
+主仓库用 GitHub Actions 手动触发即可**自动打 tag + 建 Release + 挂产物**，无需本地操作。
+
+### 版本号（X.Y.Z 三段式）
+
+- 格式：`主.次.修订`，如 `0.1.4`；递增修订号即可，主/次号在破坏性改动/新特性时递增。
+- 一个版本号**同时控制**四处，保持一致：
+  - Git tag / Release：`ios-vX.Y.Z`（iOS）、`android-vX.Y.Z`（Android），**分平台各自 Release**；
+  - 原生 app 版本：iOS `CFBundleShortVersionString`、Android `versionName`（`--build-name`）；
+  - 原生构建号：Android `versionCode`、iOS `CFBundleVersion`（`--build-number`），自动取
+    `major*10000 + minor*100 + patch`（如 `0.1.4` → `104`）；
+  - 软件内版本显示：设置 → 版本，副标题显示该版本号（`--dart-define=APP_VERSION` 注入）。
+
+### 手动发布步骤（推荐）
+
+1. Actions → 对应打包工作流 → Run workflow；
+2. 填 `build_type=release`，填 **`发布版本号`**（`X.Y.Z`），勾选 **`发布 Release`**；
+3. 跑完会自动：建 tag `ios-vX.Y.Z` / `android-vX.Y.Z` → 建对应 GitHub Release → 挂产物；
+   - iOS 产物为**未签名 .ipa**，需自行用 Apple 证书签名侧载（AltStore / Sideloadly）；
+   - Android 产物为 APK，直接安装（Android 7.0 / API 24+，arm64-v8a）。
+
+> 只测不发布：不勾「发布 Release」即可，产物仍会以 workflow artifact 保留 14 天。
+> 勾了发布但没填版本号（或格式不对）：构建前就报错中断，避免白等编译。
+> 已存在的 tag 再次运行：不会重复建 Release，只会补充/覆盖上传该产物。
+> 建议用 `release` 构建类型做正式发布；`debug` 仅用于测试，即使发布也是 debug 包。
+
+### 参考
+
+- 分平台 tag/Release 风格参考：
+  <https://github.com/FiresonZ/mindustry-ios-builder/releases/tag/ios-v159.7>
+
 ## 开发进度
 
 | 模块 | 状态 | 说明 |
