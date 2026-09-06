@@ -1,0 +1,5 @@
+# Jekyll 配置（GitHub Pages from ./docs 构建用）
+# 让 docs 下的 .md/.markdown 渲染成排好版的 HTML 页面。
+title: KrKr2 Next
+description: 面向移动端的 KiriKiri2（吉里吉里2）视觉小说引擎运行环境
+theme: jekyll-theme-primer

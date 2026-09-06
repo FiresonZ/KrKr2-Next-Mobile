@@ -144,10 +144,34 @@ log_step "Step 1/3: Building C++ engine (static library)"
 
 export VCPKG_ROOT
 
-# Configure (only if needed)
+# 渲染诊断探针 + 日志级别：由 workflow / 环境传入（ENABLE_RENDER_PROBE、
+# KRKR_LOG_LEVEL），透传为 CMake 缓存变量。为空表示沿用 CMake 默认
+#（探针 OFF；日志级别按构建类型自动）。
+RENDER_PROBE_OPT=""
+if [[ -n "${ENABLE_RENDER_PROBE:-}" ]]; then
+    # 注意：此脚本跑在 macOS（默认 bash 3.2），不可用 ${var,,} 小写展开；
+    # workflow 布尔输入恒为小写 true/false，直接匹配即可。
+    case "$ENABLE_RENDER_PROBE" in
+        true|on|1) RENDER_PROBE_OPT="-DENABLE_RENDER_PROBE=ON" ;;
+    esac
+fi
+LOG_LEVEL_OPT=""
+if [[ -n "${KRKR_LOG_LEVEL:-}" && "${KRKR_LOG_LEVEL}" != "auto" ]]; then
+    LOG_LEVEL_OPT="-DKRKR_LOG_LEVEL=$KRKR_LOG_LEVEL"
+fi
+
+# Configure（首次构建 或 显式切换了探针/日志开关 时执行；
+# 开关变更即使已有 build.ninja 也会强制重新 configure 以生效）
+NEED_CFG=0
 if [[ ! -f "$CMAKE_BUILD_DIR/build.ninja" ]]; then
-    log_info "Running CMake configure..."
-    cmake --preset "$CMAKE_CONFIG_PRESET"
+    NEED_CFG=1
+elif [[ -n "${RENDER_PROBE_OPT}${LOG_LEVEL_OPT}" ]]; then
+    NEED_CFG=1
+fi
+
+if [[ "$NEED_CFG" == 1 ]]; then
+    log_info "Running CMake configure... (probe='${ENABLE_RENDER_PROBE:-<default>}', log_level='${KRKR_LOG_LEVEL:-<auto>}')"
+    cmake --preset "$CMAKE_CONFIG_PRESET" ${RENDER_PROBE_OPT} ${LOG_LEVEL_OPT}
 else
     log_info "Build directory already configured, skipping configure."
 fi

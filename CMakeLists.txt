@@ -27,6 +27,51 @@ option(ENABLE_TESTS "enable tests execute build(exclude ios/android)" ON)
 option(BUILD_TOOLS "build tools execute build(exclude ios/android)" ON)
 option(BUILD_ENGINE_API "build engine_api bridge library" ON)
 
+# 渲染诊断探针（SourceSample/PostBlit/IOSurfacePixelSample/BlackScreen）编译开关。
+# 默认 OFF：release 不含探针、零性能开销与日志刷屏。黑屏/渲染问题排查时
+# cmake -DENABLE_RENDER_PROBE=ON 开启（见 docs/dev/rendering-diagnosis.md）。
+option(ENABLE_RENDER_PROBE "enable per-frame render diagnostics (black-screen probes)" OFF)
+if(ENABLE_RENDER_PROBE)
+    add_compile_definitions(KRKR_RENDER_PROBE)
+endif()
+
+# 引擎运行时日志级别覆盖（独立于 debug/release）。
+# empty=auto：按构建类型默认（Release→info，Debug→debug）。
+# 显式设置时覆盖 NDEBUG 推断，经 KRKR_LOG_LEVEL_NUM 传给 engine_api.cpp，
+# 供 CI/本地命令行在 workflow 里单独选择日志级别（排查时无需改代码）。
+# 取值：trace|debug|info|warn|err|critical|off（大小写不敏感）。
+set(KRKR_LOG_LEVEL "" CACHE STRING "engine runtime log level override: trace|debug|info|warn|err|critical|off (empty=auto by build type)")
+
+if(KRKR_LOG_LEVEL)
+    string(TOLOWER "${KRKR_LOG_LEVEL}" _krkr_log_level)
+    if(_krkr_log_level STREQUAL "auto")
+        # "auto" 等价于不设：按构建类型默认（Release→info，Debug→debug），不注入宏
+        message(STATUS "KRKR_LOG_LEVEL=auto, keeping build-type default")
+    elseif(_krkr_log_level STREQUAL "trace")
+        set(_krkr_log_level_num 0)
+    elseif(_krkr_log_level STREQUAL "debug")
+        set(_krkr_log_level_num 1)
+    elseif(_krkr_log_level STREQUAL "warn")
+        set(_krkr_log_level_num 3)
+    elseif(_krkr_log_level STREQUAL "err" OR _krkr_log_level STREQUAL "error")
+        set(_krkr_log_level_num 4)
+    elseif(_krkr_log_level STREQUAL "critical")
+        set(_krkr_log_level_num 5)
+    elseif(_krkr_log_level STREQUAL "off")
+        set(_krkr_log_level_num 6)
+    else()
+        # "info" 或未知值：落为默认 info（spdlog 数值 2）；未知取值仅告警不报错。
+        if(NOT _krkr_log_level STREQUAL "info")
+            message(WARNING "Unknown KRKR_LOG_LEVEL '${KRKR_LOG_LEVEL}', falling back to info")
+        endif()
+        set(_krkr_log_level_num 2)
+    endif()
+    if(DEFINED _krkr_log_level_num)
+        add_compile_definitions(KRKR_LOG_LEVEL_NUM=${_krkr_log_level_num})
+        message(STATUS "KRKR_LOG_LEVEL=${KRKR_LOG_LEVEL} -> KRKR_LOG_LEVEL_NUM=${_krkr_log_level_num}")
+    endif()
+endif()
+
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

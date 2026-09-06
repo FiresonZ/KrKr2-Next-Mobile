@@ -4,12 +4,29 @@ on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: '构建类型（debug / release）'
+        description: '构建类型（debug / release；debug 用于 Xcode/真机测试）'
         type: choice
         default: release
         options:
           - release
           - debug
+      enable_render_probe:
+        description: '开启渲染诊断探针（黑屏/渲染排查，含每帧像素采样，见 docs/dev/rendering-diagnosis.md）'
+        type: boolean
+        default: false
+      log_level:
+        description: '引擎日志级别（auto=按构建类型：release→info，debug→debug）'
+        type: choice
+        default: auto
+        options:
+          - auto
+          - trace
+          - debug
+          - info
+          - warn
+          - err
+          - critical
+          - off
   push:
     tags:
       - 'v*'
@@ -26,6 +43,9 @@ jobs:
     timeout-minutes: 240
     env:
       BUILD_TYPE: ${{ inputs.build_type != '' && inputs.build_type || 'release' }}
+      # 渲染诊断探针开关 + 日志级别，透传给 build_ios.sh 的 cmake configure
+      ENABLE_RENDER_PROBE: ${{ inputs.enable_render_probe != '' && inputs.enable_render_probe || 'false' }}
+      KRKR_LOG_LEVEL: ${{ inputs.log_level != '' && inputs.log_level || 'auto' }}
       # 并行构建数
       JOBS: 4
 

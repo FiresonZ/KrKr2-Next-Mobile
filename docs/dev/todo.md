@@ -7,21 +7,33 @@
 
 ## 进行中 / 待验证
 
-### 1. 黑屏根因确认（含脚本探针）
-- 现象：iOS 启动后画面淡出为黑屏，引擎仍在绘制（`draw>0`）但 blit 源纹理采样全黑。
-- 已加诊断/探针：
-  - `ui_stubs.cpp::UpdateDrawBuffer` 的 `SourceSample` / `PostBlit` / 绘制计数（`draw`）采样；
-  - 本次新增 `FlutterWindowLayer::BlackScreen` 探针：连续 3 次「引擎在画 + 源纹理黑」
-    时，调用 `tTJSNI_VideoOverlay::DumpDebugStats()` 打印当前 video overlay 是否在播。
-- **工作假设**：游戏在等 krmovie 视频（op/ed 或 CG）完成，而 krmovie Present 路径仍被
-  stub（见下），导致画面停在淡出后的黑帧。
-- 待办：真机读取日志，确认 `BlackScreen` 探针中 `VideoOverlay ... playing` 是否为真；
-  据此决定是否优先实现 krmovie Present。
+### 1. Z（krkrz/KIRIKIRI Z）插件兼容 — 移动端黑屏根因【高优】
+- **现象**（真机日志 `sabbat_kr`/魔女的夜宴，目录版）：游戏正常启动到
+  `startup→Initialize→first.ks→title.ks`，XP3 全挂载，脚本/图层照常（事件 2 万对象、
+  9k ICC、内存 230MB+），但合成源纹理始终 `(0,0,0,255)` 纯黑、draw 计数卡死不再增长。
+- **已排除**：黑屏探针 `VideoOverlay: total=0 active=0 playing=0` → **不是视频/krmovie**。
+  源纹理 = 主 LayerManager 的 `DrawBuffer`（初始即 `0xFF000000`），等于**从未被合成过**
+  → Z 游戏主画面走的是 Z 那条路径（D3D drawdevice / Z 层），我们没接入。
+- **关联插件缺口**（real 游戏 `plugin/` 里这些全部 `Failed`，引擎无任何实现/stub）：
+  `drawdeviceD3D.dll`、`drawdeviceD3DZ.dll`、`kztouch.dll`、`k2compat.dll`、
+  `kagexopt.dll`、`multiimage.dll`、`squirrel.dll`、`PackinOne.dll`。
+- **与主线目标的关联**：这正是 AGENTS 里"补全解析引擎、插件，目标与 Z 闭源版兼容持平"
+  的核心项。
+- **下一步**：
+  1. 用 **Windows**（我们 CMakePresets 有 Windows MinGW 预设）跑同一游戏二分：
+     Windows 也黑 → 引擎/Z 层问题；Windows 正常 → 才转 iOS 纹理链路。
+  2. 在 `ncbAutoRegister` 内部编表里给 Z 插件**挂名**（先能 link 成功），再定位
+     到底是 `drawdeviceD3DZ` / Z 主层合成缺哪一环导致主 DrawBuffer 不被合成。
+- 参考：引擎主合成链 `BasicDrawDevice::Show→GetDrawBuffer→UpdateDrawBuffer`、
+  `CompleteForWindow→InternalComplete2(_GPU)`、`__captureBaseDrawDevice` 包装挂点
+  （见 `cpp/plugins/drawDeviceD2DCompat.cpp`）。
 
-### 2. krmovie Present 未实现（视频解码 → 画面合成）
+### 2. krmovie Present 未实现（视频解码 → 画面合成）【一般，非本次黑屏根因】
 - 现状：ffmpeg 解码链路完整（`cpp/core/movie/ffmpeg/`），但
   `VideoPresentOverlay::PresentPicture` 及 overlay 合成到场景/纹理的路径仍是 stub
   （只打一条 warn，不渲染）。
+- 备注：**已证实不是魔女的夜宴黑屏的原因**（`VideoOverlay total=0`）；保留为通用待办，
+  供真正的视频 OP/影片游戏使用。
 - 待办：评估并把解码帧 RGBA 合成到引擎场景（Mixer/Layer）或 Flutter 纹理。
 - 参考：`cpp/core/visual/impl/VideoOvlImpl.cpp` 的 `EC_UPDATE` 处理与
   `iTVPVideoOverlay::PresentVideoImage` / `GetFrontBuffer` 契约。
