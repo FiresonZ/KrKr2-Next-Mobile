@@ -56,8 +56,8 @@ cmake --preset "Linux Debug Config" && cmake --build --preset "Linux Debug Build
 |---|---|
 | iOS 构建 + CI 打包 | ✅ 可出**无签名 IPA**（工作流直接装 `Payload/Runner.app` 打 nosign.ipa，供 AltStore/Sideloadly 侧载测试）；**已出测试版骨架，准备预发布** |
 | iOS 黑屏诊断 | 🔬 探针已加：`ui_stubs.cpp::UpdateDrawBuffer` 上报 `SourceSample/PostBlit/draw/BlackScreen`（含 `VideoOverlay` 播放状态）；根因待真机日志确认（疑似 krmovie Present stub 阻塞） |
-| Android 恢复（triplet/preset/JNI/Kotlin 插件/壳层） | ⚠️ 构建中：glib(meson) 被 vcpkg 按 armv7 编译、与 arm64 库错配；已在 glib overlay 端口追加 arm64 meson 交叉文件强制 `aarch64` 编译+链接（含 c/cpp/c_ld/cpp_ld/c_link_args），**待 CI 验证后真机实测** |
-| vcpkg meson × Android | ⚠️ 已知坑：`get_cmake_vars` 无论 triplet 的 `ANDROID_ABI=arm64-v8a` 都回落 `--target=armv7-none-linux-androideabi21`；cmake/autotools 端口正常，仅 meson 端口（如 glib）会与 arm64 库错配。修法见 `vcpkg/ports/glib/portfile.cmake` |
+| Android 恢复（triplet/preset/JNI/Kotlin 插件/壳层） | 🛠 已对齐上游做法：triplet 补 `VCPKG_CMAKE_CONFIGURE_OPTIONS -DANDROID_ABI=arm64-v8a`（根治 boost 等 CMake 端口 32 位错配）+ boost 组件改 CONFIG 直连（绕开 EXACT 版本转发）双保险；glib(meson) 仍走 overlay，**待 CI 全量重编后真机实测** |
+| vcpkg meson × Android | ⚠️ 已知坑：`get_cmake_vars` 无论 triplet 的 `ANDROID_ABI=arm64-v8a` 都回落 `--target=armv7-none-linux-androideabi21`；cmake/autotools 端口现靠全局 `-DANDROID_ABI` 已正常，仅 meson 端口（如 glib）会与 arm64 库错配。修法见 `vcpkg/ports/glib/portfile.cmake` |
 | Linux 引擎核心验证 CI（engine_verify.yml） | ✅ 首次绿灯（新增 Linux 宿主平台实现 platform_linux.cpp 等 11 项修复） |
 | SIMD 公式缺陷修复 | ⚠️ 已回退保正确，修复列为待办：tests/tvpgl_simd_compare 逐像素比对证实 23 处 SIMD≠标量；PS 全系混合 / SubBlend_o / ScreenBlend 现指回 `*_c` 标量（`tvpgl_simd_init.cpp` 已注释对应注册），待逐模式修到与标量位级一致后放回 |
 | 构建提速 | ✅ 已删 bullet3、catch2 移动端，CI 加 ccache |
