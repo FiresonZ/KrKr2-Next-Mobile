@@ -54,21 +54,22 @@ if(VCPKG_TARGET_IS_ANDROID)
     set(_ranlib   "${_bin}/llvm-ranlib")
     set(_nm       "${_bin}/llvm-nm")
 
-    # libexif 从 git 快照构建，configure.ac 已提交但生成的 configure 没有，
-    # 需用 autotools 先 autoreconf（vcpkg 注册了这些宿主工具的自动获取）。
-    vcpkg_find_acquire_program(AUTOCONF)
-    vcpkg_find_acquire_program(AUTOMAKE)
-    vcpkg_find_acquire_program(LIBTOOL)
-    get_filename_component(_autoconf_bin "${AUTOCONF}" DIRECTORY)
-    get_filename_component(_automake_bin "${AUTOMAKE}" DIRECTORY)
-    get_filename_component(_libtool_bin "${LIBTOOL}" DIRECTORY)
-    vcpkg_add_to_path("${_autoconf_bin}" "${_automake_bin}" "${_libtool_bin}")
-    # gettext 的 autopoint 与 m4（vcpkg.json 声明 gettext:host 依赖）供 AM_GNU_GETTEXT 使用
-    set(ENV{ACLOCAL_PATH} "${CURRENT_HOST_INSTALLED_DIR}/share/aclocal")
-    set(ENV{AUTOPOINT}    "${CURRENT_HOST_INSTALLED_DIR}/bin/autopoint")
+    # libexif 从 git 快照构建（github 归档不含生成的 configure），需用 autotools 先
+    # autoreconf 生成 configure。vcpkg_find_acquire_program 不认识 AUTOCONF/AUTOMAKE/
+    # LIBTOOL 这类 tool 名（官方 vcpkg_configure_make 的 AUTOCONFIG 也是
+    # find_program(AUTORECONF autoreconf) 并依赖系统 autotools），故这里同样依赖
+    # 宿主系统已装的 autoreconf（android workflow 已 apt 安装 autoconf/automake/libtool；
+    # iOS/macOS workflow 已 brew 安装）。gettext 的 autopoint 与 m4 由 host 依赖提供，
+    # 通过 PATH / ACLOCAL_PATH 注入，供 AM_GNU_GETTEXT 使用。
+    find_program(_libexif_autoreconf autoreconf)
+    if(NOT _libexif_autoreconf)
+        message(FATAL_ERROR "libexif(android): 找不到 autoreconf，请安装 autoconf/automake/libtool")
+    endif()
+    list(PREPEND ENV{PATH} "${CURRENT_HOST_INSTALLED_DIR}/bin")
+    list(PREPEND ENV{ACLOCAL_PATH} "${CURRENT_HOST_INSTALLED_DIR}/share/aclocal")
 
     vcpkg_execute_build_process(
-        COMMAND autoreconf -i -f
+        COMMAND "${_libexif_autoreconf}" -i -f
         WORKING_DIRECTORY "${SOURCE_PATH}"
         LOGNAME "autoreconf-${TARGET_TRIPLET}"
     )
