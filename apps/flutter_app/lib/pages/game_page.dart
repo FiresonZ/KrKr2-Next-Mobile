@@ -363,7 +363,7 @@ class _GamePageState extends State<GamePage> with WidgetsBindingObserver {
       for (final root in roots) {
         final d = Directory(root);
         if (!await d.exists()) continue;
-        await for (final entity in d.list(followLinks: false, recurse: false)) {
+        await for (final entity in d.list(followLinks: false, recursive: false)) {
           if (entity is File &&
               entity.path.toLowerCase().endsWith('.xp3')) {
             return true;
