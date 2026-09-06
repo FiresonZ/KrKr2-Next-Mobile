@@ -61,5 +61,7 @@ platforms/apple/macos/        macOS 独立资源（Flutter 壳已接管入口）
 
 **关键概念**：iOS 上引擎以**静态库**链接进 Runner，Dart 用 `DynamicLibrary.process()` 加载；
 macOS 上为**动态库** `libengine_api.dylib`，打包进 App 的 Frameworks；
-Android 上为**自包含 .so**（`-Wl,--whole-archive` 打包全部引擎目标），Dart FFI 直接加载。
+Android 上为**自包含 .so**（插件源码经 `target_sources(PUBLIC)` 的 `INTERFACE_SOURCES`
+直接编进 `engine_api.so`，普通链接 `krkr2core+krkr2plugin`；不用 `--whole-archive`），
+Dart FFI 直接加载。
 详见 [architecture.md](architecture.md) 与 [build.md](build.md)。

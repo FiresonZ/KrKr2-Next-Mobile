@@ -152,8 +152,11 @@ Apple 上必须对 ANGLE 的 `libGLESv2`/`libEGL`/`libANGLE` 用 `-force_load` �
   `AttachNativeWindow`/自动挂载 ANativeWindow）与 `__ANDROID__` ifdef 是恢复前就存在的，
   只缺 `krkr_GetNativeWindow()`/`krkr_GetSurfaceDimensions()` 的实现（现在在
   `engine_api_android_jni.cpp`，由 `-landroid -llog` 链接）。
-- **`.so` 必须自包含**：Android 无法像 iOS 那样额外合并静态库，`engine_api` 以 SHARED 形态
-  `-Wl,--whole-archive` 打进 krkr2core/krkr2plugin 全部目标（等价 iOS `-force_load`）。
+- **`.so` 必须自包含**：Android 无法像 iOS 那样额外合并静态库，但插件子库
+  `target_sources(PUBLIC)` 的源码会经 `INTERFACE_SOURCES` 直接编进 `engine_api.so`，
+  所以 `engine_api` 以 SHARED 形态**普通链接** `krkr2core+krkr2plugin` 即可自包含。
+  注意 **不要加 `--whole-archive`**：它会强制把 psbfile.a/motionplayer.a 的对象再拉一份，
+  与 engine_api 已编译的副本冲突，产生 ld.lld 重复符号（对齐上游 reAAAq/KrKr2-Next 做法）。
 - **vcpkg angle 分平台**：`vcpkg.json` 中 angle 拆成两条 —— Apple 用 `metal` feature，
   Android 用 `vulkan` feature（feature 带 `supports` 约束，混用会编译失败）。
 - **libpng** 平台条件扩展为 `osx | ios | android`（`find_package(PNG REQUIRED)` 在

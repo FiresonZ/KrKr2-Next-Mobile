@@ -37,12 +37,13 @@ target_include_directories(engine_api
 if(TARGET krkr2core AND TARGET krkr2plugin)
     target_compile_definitions(engine_api PRIVATE ENGINE_API_USE_KRKR2_RUNTIME)
     if(ANDROID)
-        # Keep every object from the engine static libraries (global
-        # constructors, TJS native bindings, plugin registration) — mirrors
-        # the -force_load used on iOS.
-        target_link_libraries(engine_api PRIVATE
-            "-Wl,--whole-archive" krkr2core krkr2plugin "-Wl,--no-whole-archive"
-        )
+        # 与上游(reAAAq/KrKr2-Next)一致：插件子库(krkr2plugin/psbfile/motionplayer/…)
+        # 均用 target_sources(PUBLIC)，源码会经 INTERFACE_SOURCES 直接编进 engine_api.so，
+        # 插件注册/全局构造器天然保留，因此这里必须普通链接 krkr2core + krkr2plugin，
+        # 不能再包 "--whole-archive"。（曾经的 whole-archive 会强制把 psbfile.a/motionplayer.a
+        # 的对象再拉一份，与 engine_api 里已编译的那份重复 → ld.lld duplicate symbol：
+        # motion::ResourceManager / PSB::ArchiveType 等。）
+        target_link_libraries(engine_api PRIVATE krkr2core krkr2plugin)
         # ANativeWindow (libandroid) + __android_log_print (liblog)
         target_link_libraries(engine_api PRIVATE android log)
     else()

@@ -61,3 +61,39 @@
 - 现状：已支持标准 `data.xp3`/同目录 xp3 自动挂载（`TVPAutoMountProjectXP3Archives`）。
 - 待办：验证形如 `D:\...\委員界の異端者體驗版`（体验版，目录内散装文件而非标准
   gameexe.dat/data.xp3 布局）的目录能否识别与启动；若不支持，补目录结构探测与启动文件定位。
+
+### 8. 去除桌面端残余文件【工程清理，未来执行】
+- **目标**：本项目专注移动端（iOS/Android，macOS 为 Apple 开发目标）。逐步清理从上
+  游继承/回填的桌面端残留，避免读者/AI 误以为支持桌面。
+- **约定**：`win32/` 目录是**跨平台共享实现**（音频/线程/系统控制），**不能删**
+  （conventions §1）；macOS runner 保留作 Apple 开发。
+- **待清理方向**（对照上游 `reAAAq/KrKr2-Next` 我们有而它独有的 180 文件）：
+  1. 桌面应用 runner：`platforms/windows`、`platforms/linux/main.cpp`（若保留会暗示桌面支持）。
+  2. 纯 Windows UI 窗体实现：`cpp/core/environ/win32/{MainFormUnit,WindowFormUnit,ConfigFormUnit,
+     VersionFormUnit,TouchPoint,MouseCursor,TouchPoint,ImeControl}` 等与 UI 框架类型无关的窗体；
+     保留却属于跨平台共享的（如 `CompatibleNativeFuncs`/`WindowsUtil` 中供其它平台复用的部分）先核对再动。
+  3. `plugins/layerex_draw/windows/*`（桌面渲染后端）。
+  4. `bridge/flutter_engine_bridge/{linux,windows}/…` 桌面平台插件与 `example/*`。
+- **做法**：先确认没有 CMake/target 引用（grep），再删除；删后本地 `cmake --preset` Linux 验证一次。
+  这是"以后"低优先清理，不阻塞当前 iOS/Android 发布。
+
+### 9. 安卓构建链 —— 与上游的差异防崩备忘录（2026-09 对账）
+> 防止"从上游合并/照搬"再次把安卓构建弄崩。对账对象：`reAAAq/KrKr2-Next`（main/master）。
+- **结论：我们的安卓管线基本自研**。上游 `CMakePresets.json` **没有 Android 预设**（走它自己的
+  `cmake/vcpkg_android.cmake` 交叉）；我们的 CMakePresets Android 预设 + JNI 胶水 + 壳层是自建。
+  所以**不要把上游 CMake/triplet/vcpkg 全量合回来**，会破坏已修好的 arm64 链路。
+- **别从上游合并 `vcpkg.json`**：
+  - 上游含而我们已删/不同的：`bullet3`（提速已删）、`breakpad`/`libogg`/`opus`(android, 崩溃上报/音频)、
+    `dirent`(windows)、`libgdiplus` 平台范围、platform 表达式写法不同。
+  - 我们独有的：`oboe`（android 低延迟音频，见下）。
+  - 若要功能（崩溃上报等）只按需补单项，不要整体替换。
+- **engine_api 链接**：上游 Android 用**普通链接** `krkr2core+krkr2plugin`（**无 `--whole-archive`**）。
+  我们已对齐；**别再加 whole-archive**（会把 psbfile/motionplayer 对象再拉一份 → ld.lld 重复符号）。
+- **JNI 契约必须自洽**：我们包 `dev.krkr2.flutter_engine_bridge` ↔
+  `Java_dev_krkr2_flutter_1engine_1bridge_FlutterEngineBridgePlugin_native{SetSurface,DetachSurface}`
+  已核对自洽（上游是 `org.github.krkr2`，各自自洽）。**改包名必须同步改 JNI 方法名**，否则运行时 `UnsatisfiedLinkError`。
+- **oboe**：上游 `WaveMixer.cpp` 也 `#include "oboe/Oboe.h"` 但上游 `vcpkg.json` 没有 oboe
+  （上游 Android 未必能编到那步）。我们已加 oboe 依赖 + `find_library` 链接（vcpkg 1.8.0 端口
+  只给 pkg-config、不给 CMake config，不能用 `find_package(oboe CONFIG)`）。**别因"上游没加"就移除**。
+- **arm64 triplet ABI 修复是我们独有**（`VCPKG_CMAKE_CONFIGURE_OPTIONS -DANDROID_ABI=arm64-v8a`、
+  `CMAKE_ANDROID_ARCH_ABI`/`CMAKE_SYSTEM_PROCESSOR=aarch64`），上游 triplet 是原版，别覆盖。

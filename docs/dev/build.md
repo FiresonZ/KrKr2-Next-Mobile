@@ -95,7 +95,9 @@
 
    - 依赖装到 `out/android/<type>/vcpkg_installed/arm64-android/`（triplet `arm64-android`）
 
-   - `engine_api` 通过 `-Wl,--whole-archive` 打包全部引擎目标（等价 iOS 的 `-force_load`）；
+   - `engine_api` 自包含打包：插件子库 `target_sources(PUBLIC)` 源码经 `INTERFACE_SOURCES`
+     直接编进 .so，`engine_api` 普通链接 `krkr2core + krkr2plugin`（**不用 `--whole-archive`**，
+     否则 psbfile/motionplayer 对象重复触发 ld.lld 重复符号）；
      JNI 胶水 `engine_api_android_jni.cpp` 提供 `krkr_GetNativeWindow` 及 Kotlin 可调用的
      `nativeSetSurface` / `nativeDetachSurface`。
 5. 拷贝 `libengine_api.so` → `apps/flutter_app/android/app/src/main/jniLibs/arm64-v8a/`（已 gitignore）。
