@@ -21,9 +21,13 @@
 #if defined(__ANDROID__)
 #include <android/log.h>
 #include <android/native_window.h>
-// Defined in krkr2_android.cpp (C++ linkage)
-ANativeWindow* krkr_GetNativeWindow();
-void krkr_GetSurfaceDimensions(uint32_t*, uint32_t*);
+// Defined in engine_api_android_jni.cpp inside `extern "C" { ... }`, so the
+// declarations MUST also be `extern "C"` (C linkage). Declaring them with default
+// C++ linkage produces a mangled symbol (_Z20krkr_GetNativeWindowv) that cannot
+// resolve against the unmangled C symbol the JNI file exports → ld.lld undefined
+// symbol at link time.
+extern "C" ANativeWindow* krkr_GetNativeWindow();
+extern "C" void krkr_GetSurfaceDimensions(uint32_t*, uint32_t*);
 #endif
 #if !defined(__ANDROID__)
 #include <execinfo.h>
