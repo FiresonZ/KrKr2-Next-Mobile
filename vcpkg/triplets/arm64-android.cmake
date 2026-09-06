@@ -30,3 +30,11 @@ set(ANDROID_NATIVE_API_LEVEL 24 CACHE STRING "")
 # Without this, configure may think it is not cross-compiling and try to run
 # target binaries on the host.
 set(VCPKG_MAKE_BUILD_TRIPLET "--host=aarch64-linux-android")
+
+# 上游(KrKr2-Next)的做法：把 -DANDROID_ABI=arm64-v8a 作为 VCPKG_CMAKE_CONFIGURE_OPTIONS
+# 传给【每一个】cmake 端口（含 boost-locale / boost-iostreams 等 CMake 型 boost 组件），
+# 这才是 boost 能正确按 arm64 配置的根因。之前的做法只设 VCPKG_ANDROID_ABI + 顶部 cache
+# 变量，未进入各端口子 cmake 得 configure，导致 boost 等 CMake 端口被默认按 32 位配置，
+# 生成的 config 版本串被误标 "(32bit)"，find_package(Boost ...) EXACT 转发时失败，
+# 并被迫为 zlib/libpng/freetype/glib 等逐个打 overlay 补救。这里补齐全局 ABI 选项根治。
+set(VCPKG_CMAKE_CONFIGURE_OPTIONS -DANDROID_ABI=arm64-v8a)
