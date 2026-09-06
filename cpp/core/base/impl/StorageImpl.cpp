@@ -1657,6 +1657,8 @@ void TVPAutoMountProjectXP3Archives() {
         return;
     }
 
+    tjs_int mountedCount = 0;
+
     for(const auto &xp3Name : xp3Names) {
         ttstr archivePath = projStorage + ttstr(xp3Name.c_str());
         archivePath = TVPNormalizeStorageName(archivePath);
@@ -1671,6 +1673,7 @@ void TVPAutoMountProjectXP3Archives() {
             continue;
         }
         if(!arc) continue;
+        mountedCount++;
 
         std::set<std::u16string> dirPaths;
         dirPaths.insert(std::u16string());
@@ -1709,6 +1712,11 @@ void TVPAutoMountProjectXP3Archives() {
             ttstr((tjs_int)dirPaths.size()) + ttstr(TJS_W(" dirs, ")) +
             ttstr((tjs_int)fileCount) + ttstr(TJS_W(" files)")));
     }
+
+    TVPAddImportantLog(
+        ttstr(TJS_W("(info) AutoMountProjectXP3: found ")) +
+        ttstr((tjs_int)xp3Names.size()) + ttstr(TJS_W(" xp3, mounted ")) +
+        ttstr(mountedCount) + ttstr(TJS_W(" archive(s) in project dir")));
 }
 
 void TVPBoostAutoMountPaths() {
