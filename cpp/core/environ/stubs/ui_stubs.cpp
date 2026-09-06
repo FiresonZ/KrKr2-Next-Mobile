@@ -263,11 +263,19 @@ public:
         static int s_blitDbg = 0;
         const bool kBlitDump = ((s_blitDbg++) % 5) == 1;
         if (kBlitDump) {
+            // 引擎本段(自上次 GetRenderStat 清零以来)实际执行的 GL 绘制次数：
+            //   draw 持续增长 -> 引擎在合成图层，黑的是「画了但没进 tex4」
+            //   draw 归零      -> 引擎没发起合成，问题在调度/无可见图层
+            unsigned int engDraw = 0;
+            uint64_t engVmem = 0;
+            if(::TVPGetRenderManager()) {
+                ::TVPGetRenderManager()->GetRenderStat(engDraw, engVmem);
+            }
             spdlog::info(
-                "FlutterWindowLayer::UpdateDrawBuffer: path={} nativeTex={} srcTex={} blitTex={} {}x{} layers={}",
+                "FlutterWindowLayer::UpdateDrawBuffer: path={} nativeTex={} srcTex={} blitTex={} {}x{} layers={} draw={}",
                 nativeGLTex ? "GPU" : "CPU", nativeGLTex, blitSrcTexture,
                 blit_texture_, static_cast<unsigned>(tw), static_cast<unsigned>(th),
-                TVPGetLayerCount());
+                TVPGetLayerCount(), engDraw);
             if (blitSrcTexture != 0) {
                 GLint prevFbo = 0;
                 glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
