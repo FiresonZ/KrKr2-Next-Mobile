@@ -55,7 +55,7 @@ cmake --preset "Linux Debug Config" && cmake --build --preset "Linux Debug Build
 | 平台/模块 | 状态 |
 |---|---|
 | iOS 构建 + CI 打包 | ✅ 可出**无签名 IPA**（工作流直接装 `Payload/Runner.app` 打 nosign.ipa，供 AltStore/Sideloadly 侧载测试）；**已出测试版骨架，准备预发布** |
-| iOS 黑屏诊断 | 🔬 探针已加：`ui_stubs.cpp::UpdateDrawBuffer` 上报 `SourceSample/PostBlit/draw/BlackScreen`（含 `VideoOverlay` 播放状态）；根因待真机日志确认（疑似 krmovie Present stub 阻塞） |
+| iOS 黑屏诊断 | 🔬 探针已加：`ui_stubs.cpp::UpdateDrawBuffer` 上报 `SourceSample/PostBlit/draw/BlackScreen`；真机日志已**排除视频**（`VideoOverlay total=0`），根因转向 **Z(krkrz) 插件兼容**（缺 drawdeviceD3DZ/kztouch/k2compat 等，主 DrawBuffer 从未被合成，源纹理保持初始黑），详见 [docs/dev/todo.md](docs/dev/todo.md) |
 | Android 恢复（triplet/preset/JNI/Kotlin 插件/壳层） | 🛠 已对齐上游做法：triplet 补 `VCPKG_CMAKE_CONFIGURE_OPTIONS -DANDROID_ABI=arm64-v8a`（根治 boost 等 CMake 端口 32 位错配）+ boost 组件改 CONFIG 直连（绕开 EXACT 版本转发）双保险；glib(meson) 仍走 overlay，**待 CI 全量重编后真机实测** |
 | vcpkg meson × Android | ⚠️ 已知坑：`get_cmake_vars` 无论 triplet 的 `ANDROID_ABI=arm64-v8a` 都回落 `--target=armv7-none-linux-androideabi21`；cmake/autotools 端口现靠全局 `-DANDROID_ABI` 已正常，仅 meson 端口（如 glib）会与 arm64 库错配。修法见 `vcpkg/ports/glib/portfile.cmake` |
 | Linux 引擎核心验证 CI（engine_verify.yml） | ✅ 首次绿灯（新增 Linux 宿主平台实现 platform_linux.cpp 等 11 项修复） |
