@@ -294,10 +294,11 @@ public:
                 glBindFramebuffer(GL_FRAMEBUFFER, dbgFbo);
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                        GL_TEXTURE_2D, blitSrcTexture, 0);
+                int nonBlack = 0; // 提升到 blitSrcTexture 作用域，供下方黑屏探针使用
                 if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
                     // glFlush 一次后再采，确认 readback 读到最终合成结果而非中途状态
                     glFlush();
-                    uint64_t sR=0, sG=0, sB=0, sA=0; int nonBlack=0;
+                    uint64_t sR=0, sG=0, sB=0, sA=0;
                     unsigned char px[4];
                     for (int gy=0; gy<5; ++gy) for (int gx=0; gx<5; ++gx) {
                         const int x=(int)((gx+0.5f)*static_cast<float>(tw)/5.0f);
@@ -315,26 +316,26 @@ public:
                 }
                 glBindFramebuffer(GL_FRAMEBUFFER, prevFbo);
                 glDeleteFramebuffers(1, &dbgFbo);
-            }
 
-            // ── 黑屏探针 ─────────────────────────────────────────────
-            // 判定：引擎在持续绘制(engDraw>0) 但 blit 源纹理采样全黑(nonBlack==0)。
-            // 连续 kBlackReportThreshold 次出现即判定黑屏已持久化，上报：
-            //   1) 视频 overlay 是否在播（验证 krmovie Present stub 阻塞假设）；
-            //   2) 引擎当前绘制计数与图层数，供定位脚本/调度问题。
-            if (engDraw > 0 && nonBlack == 0) {
-                ++s_blackSampleCount;
-                if (s_blackSampleCount >= kBlackReportThreshold &&
-                    !s_blackReported) {
-                    s_blackReported = true;
-                    std::string ovl = tTJSNI_VideoOverlay::DumpDebugStats();
-                    spdlog::warn(
-                        "FlutterWindowLayer::BlackScreen: engine keeps drawing (draw={}, layers={}) but blit source is black. {}",
-                        engDraw, TVPGetLayerCount(), ovl);
+                // ── 黑屏探针 ─────────────────────────────────────────────
+                // 判定：引擎在持续绘制(engDraw>0) 但 blit 源纹理采样全黑(nonBlack==0)。
+                // 连续 kBlackReportThreshold 次出现即判定黑屏已持久化，上报：
+                //   1) 视频 overlay 是否在播（验证 krmovie Present stub 阻塞假设）；
+                //   2) 引擎当前绘制计数与图层数，供定位脚本/调度问题。
+                if (engDraw > 0 && nonBlack == 0) {
+                    ++s_blackSampleCount;
+                    if (s_blackSampleCount >= kBlackReportThreshold &&
+                        !s_blackReported) {
+                        s_blackReported = true;
+                        std::string ovl = tTJSNI_VideoOverlay::DumpDebugStats();
+                        spdlog::warn(
+                            "FlutterWindowLayer::BlackScreen: engine keeps drawing (draw={}, layers={}) but blit source is black. {}",
+                            engDraw, TVPGetLayerCount(), ovl);
+                    }
+                } else {
+                    s_blackSampleCount = 0;
+                    s_blackReported = false;
                 }
-            } else {
-                s_blackSampleCount = 0;
-                s_blackReported = false;
             }
         }
 
