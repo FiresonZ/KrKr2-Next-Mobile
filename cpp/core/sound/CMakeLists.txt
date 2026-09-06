@@ -44,6 +44,13 @@ find_package(OpusFile CONFIG REQUIRED)
 
 find_package(OpenAL CONFIG REQUIRED)
 
+# WaveMixer.cpp 在 Android 上用 oboe 作为低延迟音频渲染后端（头文件 oboe/Oboe.h，
+# 类 tTVPAudioRendererOboe），运行时失败回退到 tTVPAudioRendererAL（OpenAL）。
+# 依赖已加在 vcpkg.json（platform=android）。
+if(ANDROID)
+    find_package(oboe CONFIG REQUIRED)
+endif()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Vorbis::vorbis
     Vorbis::vorbisfile
@@ -53,3 +60,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     OpusFile::opusfile
     OpenAL::OpenAL
 )
+
+if(ANDROID)
+    target_link_libraries(${PROJECT_NAME} PRIVATE oboe::oboe)
+endif()
