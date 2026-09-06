@@ -47,8 +47,16 @@ find_package(OpenAL CONFIG REQUIRED)
 # WaveMixer.cpp 在 Android 上用 oboe 作为低延迟音频渲染后端（头文件 oboe/Oboe.h，
 # 类 tTVPAudioRendererOboe），运行时失败回退到 tTVPAudioRendererAL（OpenAL）。
 # 依赖已加在 vcpkg.json（platform=android）。
+#
+# 注意：vcpkg 的 oboe 端口（1.8.0）只提供 pkg-config、不输出 CMake config 文件，
+# 因此不能用 find_package(oboe CONFIG)；头文件 oboe/Oboe.h 已在 vcpkg_installed/include
+# 全局 include 路径里，这里直接用 find_library 定位静态库 liboboe.a 并链接。
+# oboe 的 OpenSLES 后端还需要链接系统平台库 libOpenSLES.so。
 if(ANDROID)
-    find_package(oboe CONFIG REQUIRED)
+    find_library(OBOE_STATIC_LIB oboe)
+    if(NOT OBOE_STATIC_LIB)
+        message(FATAL_ERROR "oboe static library not found via find_library(oboe); check vcpkg oboe install")
+    endif()
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -62,5 +70,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 if(ANDROID)
-    target_link_libraries(${PROJECT_NAME} PRIVATE oboe::oboe)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${OBOE_STATIC_LIB} OpenSLES)
 endif()
