@@ -334,16 +334,46 @@ class _GamePageState extends State<GamePage> with WidgetsBindingObserver {
       final startup = File('$path/startup.tjs');
       final init = File('$path/data/system/initialize.tjs');
       final initUpper = File('$path/data/system/Initialize.tjs');
-      if (!await startup.exists() &&
-          !await init.exists() &&
-          !await initUpper.exists()) {
-        return 'Missing startup script in: $path\n'
-            '(looked for startup.tjs and data/system/initialize.tjs)';
+      if (await startup.exists() ||
+          await init.exists() ||
+          await initUpper.exists()) {
+        return null;
       }
+
+      // 没有散装启动脚本时，若目录内含 *.xp3（data.xp3/scenario.xp3 等），也视为有效：
+      // 引擎 TVPAutoMountProjectXP3Archives 会把游戏目录自身的 xp3 挂载，startup.tjs
+      // 可从包内定位。只在目录里没有任何 .xp3 时才报"缺启动脚本"。
+      if (await _hasAnyXp3(dir)) {
+        return null;
+      }
+      return 'Missing startup script in: $path\n'
+          '(looked for startup.tjs, data/system/initialize.tjs, '
+          'or any .xp3 archive in the game folder)';
     } catch (e) {
       return 'Game path check failed: $e';
     }
     return null;
+  }
+
+  /// 目录（含常见子目录 data/ scenario/ system/）里是否至少存在一个 .xp3 归档。
+  /// 用于打包版游戏（启动脚本在 xp3 内，目录无散装 startup.tjs）的识别放行。
+  Future<bool> _hasAnyXp3(Directory dir) async {
+    try {
+      final roots = <String>[dir.path, '$dir/data', '$dir/scenario', '$dir/system'];
+      for (final root in roots) {
+        final d = Directory(root);
+        if (!await d.exists()) continue;
+        await for (final entity in d.list(followLinks: false, recurse: false)) {
+          if (entity is File &&
+              entity.path.toLowerCase().endsWith('.xp3')) {
+            return true;
+          }
+        }
+      }
+    } catch (_) {
+      // 目录扫描失败不阻断，交由引擎在打开时再报错。
+    }
+    return false;
   }
 
   Future<void> _autoStart() async {
