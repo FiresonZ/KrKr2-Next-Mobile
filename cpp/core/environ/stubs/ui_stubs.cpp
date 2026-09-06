@@ -37,6 +37,9 @@
 static void (*g_postDrawHook)() = nullptr;
 void TVPSetPostDrawHook(void (*hook)()) { g_postDrawHook = hook; }
 
+// 全局图层对象计数（诊断用，区分「引擎没建图层/没东西画」与「画了但没进源纹理」）
+extern tjs_int TVPGetLayerCount();
+
 // ---------------------------------------------------------------------------
 // FlutterWindowLayer — concrete iWindowLayer for Flutter host mode.
 // Provides a logical window backed by the ANGLE EGL Pbuffer surface.
@@ -250,16 +253,21 @@ public:
             }
         }
 
-        // ── 诊断插桩（低频）：记录 blit 分支，并对 blit 源纹理抽样 ──
+        // ── 诊断插桩：记录 blit 分支，并对 blit 源纹理抽样 ──
         // 目的：区分黑屏（IOSurface 全黑）的根因归属。
         //   SourceSample !黑 -> 引擎合成纹理有画面，黑屏在「blit 到 IOSurface」这步
         //   SourceSample 全黑 -> 引擎 GL 合成本身没把画面画进源纹理。
+        // 频率提到每 5 帧，并在同一采样点对源纹理连续读两次（相隔若干 draw 后）
+        // 以排除「单帧瞬时闪」；同时打印全局图层对象数 layers，区分
+        // 「引擎没建/没东西画」与「画了但没进源纹理」两条线。
         static int s_blitDbg = 0;
-        if (s_blitDbg++ % 30 == 1) {
+        const bool kBlitDump = ((s_blitDbg++) % 5) == 1;
+        if (kBlitDump) {
             spdlog::info(
-                "FlutterWindowLayer::UpdateDrawBuffer: path={} nativeTex={} srcTex={} blitTex={} {}x{}",
+                "FlutterWindowLayer::UpdateDrawBuffer: path={} nativeTex={} srcTex={} blitTex={} {}x{} layers={}",
                 nativeGLTex ? "GPU" : "CPU", nativeGLTex, blitSrcTexture,
-                blit_texture_, static_cast<unsigned>(tw), static_cast<unsigned>(th));
+                blit_texture_, static_cast<unsigned>(tw), static_cast<unsigned>(th),
+                TVPGetLayerCount());
             if (blitSrcTexture != 0) {
                 GLint prevFbo = 0;
                 glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
@@ -269,6 +277,8 @@ public:
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                        GL_TEXTURE_2D, blitSrcTexture, 0);
                 if (glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+                    // glFlush 一次后再采，确认 readback 读到最终合成结果而非中途状态
+                    glFlush();
                     uint64_t sR=0, sG=0, sB=0, sA=0; int nonBlack=0;
                     unsigned char px[4];
                     for (int gy=0; gy<5; ++gy) for (int gx=0; gx<5; ++gx) {
@@ -399,11 +409,11 @@ public:
         glUseProgram(0);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-        // 诊断（低频）：blit 全屏 quad 后立刻读当前绑定 FBO（IOSurface fbo2）中心像素
+        // 诊断：blit 全屏 quad 后立刻读当前绑定 FBO（IOSurface fbo2）中心像素
         //  + glGetError，区分「blit 绘制没写进 fbo2」还是「写进去了但 IOSurface 层未落地」。
         // 中心像素非黑 -> blit 写入成功，问题在 IOSurface/Flutter 落地与同步；
         // 中心像素黑   -> blit 全屏 quad 绘制本身失败（shader/uniform/状态）。
-        if (s_blitDbg % 30 == 1) {
+        if (kBlitDump) {
             GLenum postErr = glGetError();
             unsigned char dbgPx[4] = {0, 0, 0, 0};
             GLint dbgFbo = 0;

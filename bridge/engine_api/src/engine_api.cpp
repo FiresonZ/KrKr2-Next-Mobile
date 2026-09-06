@@ -1345,7 +1345,9 @@ engine_result_t engine_tick(engine_handle_t handle, uint32_t delta_ms) {
     // 低频采样 IOSurface，区分黑屏两端归属：
     //   采样非黑 -> 引擎已把画面写进共享 IOSurface，黑屏在 Flutter 读/显示侧；
     //   采样全黑 -> 引擎 blit 到 IOSurface 的链路本身有问题。
-    if (impl->tick_count % 90 == 0) {
+    // 频率提到每 5 tick：高密度帧间序列可区分「稳定黑屏」与「单帧瞬时闪黑」，
+    // 同时对照 UI_stubs 的 SourceSample(每5帧) 分辨源纹理 vs IOSurface 落地。
+    if (impl->tick_count % 5 == 0) {
       auto& iosurf_egl = krkr::GetEngineEGLContext();
       if (iosurf_egl.HasIOSurface()) {
         const int sampW = static_cast<int>(iosurf_egl.GetIOSurfaceWidth());
