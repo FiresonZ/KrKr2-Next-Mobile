@@ -98,17 +98,17 @@ jobs:
 
       - name: Restore vcpkg binary cache
         # vcpkg 二进制缓存：首次全量编译后，后续运行秒级还原依赖
-        # 缓存 key 版本段 arm64fix2：先后加 zlib/libpng/freetype/bzip2/brotli/expat 等
-        # overlay 时发现，triplet 修复前产出的 armv7 静态库仍会经 restore-keys 前缀命中，
-        # 一个接一个暴露（打地鼠）。把前缀版本段整体 bump（不命中旧 arm64fix 缓存），
-        # 强制在修正后的 triplet + overlay 下全量重编一次（半小时级），此后缓存即全部 arm64。
+        # 缓存 key 版本段 arm64fix3：arm64fix2 那轮全量重编把 boost-locale 等 cmake 端口在
+        # 缺 CMAKE_SYSTEM_PROCESSOR 的情况下编成了 armv7（版本串带 "(32bit)"）并写进缓存。
+        # 修好在 triplet 显式加 CMAKE_SYSTEM_PROCESSOR=aarch64 后，必须再 bump 前缀
+        # 使旧缓存不被 restore-keys 命中，强制用修正后的 triplet 全量重编一次。
         uses: actions/cache/restore@v4
         id: vcpkg
         with:
           path: ~/.cache/vcpkg
-          key: vcpkg-${{ runner.os }}-arm64fix2-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
+          key: vcpkg-${{ runner.os }}-arm64fix3-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
           restore-keys: |
-            vcpkg-${{ runner.os }}-arm64fix2-
+            vcpkg-${{ runner.os }}-arm64fix3-
 
       - name: Build C++ engine + Flutter Android app
         run: |
@@ -132,7 +132,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/vcpkg
-          key: vcpkg-${{ runner.os }}-arm64fix2-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
+          key: vcpkg-${{ runner.os }}-arm64fix3-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'vcpkg/ports/**', 'vcpkg/triplets/**') }}
 
       - name: Package APK
         run: |

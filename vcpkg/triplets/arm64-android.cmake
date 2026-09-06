@@ -12,8 +12,14 @@ set(VCPKG_ANDROID_ABI arm64-v8a)
 # 这里直接在 triplet 强制 NDK 缓存变量（triplet 会被包含 get-vars 在内的每次 cmake 加载）。
 # CMAKE_ANDROID_ARCH_ABI 是现代 NDK toolchain 真正读取的 ABI 开关（ANDROID_ABI 是旧名），
 # 同时设两者，确保 cmake 型端口、get-vars 派生的 make/meson 型端口都按 arm64 构建。
+# CMAKE_SYSTEM_PROCESSOR 也必须显式设为 aarch64：vcpkg 的 get_vars 在没有它时会按
+# 32 位 ARM 推导 target/编译参数，导致 boost-locale 等 cmake 端口被编成 armv7（其
+# CMake config 版本串带 "(32bit)"）。zlib/libpng/freetype 的 per-port overlay 恰是因为
+# 额外补了 -DCMAKE_SYSTEM_PROCESSOR=aarch64 才编对。这里落实成全局，避免每个 cmake
+# 端口都打 overlay。
 set(ANDROID_ABI arm64-v8a CACHE STRING "")
 set(CMAKE_ANDROID_ARCH_ABI arm64-v8a CACHE STRING "")
+set(CMAKE_SYSTEM_PROCESSOR aarch64 CACHE STRING "")
 set(ANDROID_PLATFORM android-24 CACHE STRING "")
 set(ANDROID_NATIVE_API_LEVEL 24 CACHE STRING "")
 
