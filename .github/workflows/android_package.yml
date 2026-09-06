@@ -27,9 +27,18 @@ on:
           - err
           - critical
           - off
+      release_version:
+        description: '发布版本号（X.Y.Z，如 0.1.4）。会在勾选「发布 Release」时按 android-vX.Y.Z 打 tag + 建 GitHub Release，并写入原生 app 版本与软件内版本。'
+        type: string
+        default: ''
+      publish_release:
+        description: '发布 Release 到 GitHub Releases（需填「发布版本号」）'
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
+      - 'android-v*'
 
 # 只保留最新一次运行的产物（避免并发互相覆盖缓存）
 concurrency:
@@ -41,17 +50,37 @@ jobs:
     name: Build Android (${{ inputs.build_type != '' && inputs.build_type || 'release' }})
     runs-on: ubuntu-22.04
     timeout-minutes: 240
+    # 需要写 contents 才能在勾选「发布 Release」时打 git tag + 建 GitHub Release
+    permissions:
+      contents: write
     env:
       BUILD_TYPE: ${{ inputs.build_type != '' && inputs.build_type || 'release' }}
       # 渲染诊断探针开关 + 日志级别，透传给 build_android.sh 的 cmake configure
       ENABLE_RENDER_PROBE: ${{ inputs.enable_render_probe != '' && inputs.enable_render_probe || 'false' }}
       KRKR_LOG_LEVEL: ${{ inputs.log_level != '' && inputs.log_level || 'auto' }}
+      # 发布版本号 + 是否发布 Release，透传进 build_android.sh 与发布步骤
+      RELEASE_VERSION: ${{ inputs.release_version != '' && inputs.release_version || '' }}
+      PUBLISH_RELEASE: ${{ inputs.publish_release != '' && inputs.publish_release || 'false' }}
       # 并行构建数
       JOBS: 4
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Validate release inputs
+        # 提前校验，避免填了发布却没填版本号空等 30 分钟编译
+        if: ${{ inputs.publish_release }}
+        run: |
+          if [[ -z "$RELEASE_VERSION" ]]; then
+            echo "::error::勾选了「发布 Release」但没填写「发布版本号」；请填 X.Y.Z（如 0.1.4）再运行"
+            exit 1
+          fi
+          if [[ "$RELEASE_VERSION" != *.*.* || "$RELEASE_VERSION" != [0-9]*.*.* ]]
+          then
+            echo "::error::发布版本号需为 X.Y.Z 三段式（如 0.1.4）；当前：$RELEASE_VERSION"
+            exit 1
+          fi
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -179,3 +208,26 @@ jobs:
           path: ${{ env.artifact }}
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish GitHub Release (Android)
+        # 勾选「发布 Release」且填了版本号时，打 android-vX.Y.Z tag + 建 GitHub Release + 挂 APK
+        if: ${{ inputs.publish_release && inputs.release_version != '' }}
+        run: |
+          set -euo pipefail
+          VERSION="$RELEASE_VERSION"
+          TAG="android-v${VERSION}"
+          NOTES=$(printf 'KrKr2 Next Android 构建，直接安装 APK（Android 7.0 / API 24+，arm64-v8a）。\n\n版本：v%s\n产物：%s\n\n> 版本号标准见仓库 README《版本号 / 发布标准》。' "$VERSION" "$(basename "${{ env.artifact }}")")
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # tag 已存在：补充上传产物，不重复建 Release
+            echo "Release $TAG 已存在，上传产物：${{ env.artifact }}"
+            gh release upload "$TAG" "${{ env.artifact }}" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" \
+              "${{ env.artifact }}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "KrKr2 Next Android v${VERSION}" \
+              --notes "$NOTES"
+          fi
+          echo "已发布：https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

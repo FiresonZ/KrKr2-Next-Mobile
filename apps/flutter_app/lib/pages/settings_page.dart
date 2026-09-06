@@ -12,6 +12,11 @@ import '../main.dart';
 import '../constants/prefs_keys.dart';
 import 'home_page.dart';
 
+/// 软件版本号：由构建脚本经 `--dart-define=APP_VERSION=<X.Y.Z>` 注入
+/// （工作流填「发布版本号」或回退 pubspec 的 version 字段）。
+/// 未注入（如直接 flutter run）时为空，界面回退显示"迭代测试"说明。
+const String kAppVersion = String.fromEnvironment('APP_VERSION');
+
 /// Standalone settings page with MD3 styling and i18n support.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -526,12 +531,21 @@ class _SettingsPageState extends State<SettingsPage> {
                     leading: const Icon(Icons.science_outlined),
                     title: Text(l10n.version),
                     subtitle: Text(
-                      l10n.aboutVersionDesc,
-                      style: TextStyle(
-                        color: colorScheme.error,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      // 发布构建注入 APP_VERSION 时显示实际版本号；
+                      // 本地直接 run 未注入时回退到"迭代测试"说明。
+                      kAppVersion.isEmpty
+                          ? l10n.aboutVersionDesc
+                          : kAppVersion,
+                      style: kAppVersion.isEmpty
+                          ? TextStyle(
+                              color: colorScheme.error,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            )
+                          : TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
                     ),
                   ),
                   const Divider(height: 1),
