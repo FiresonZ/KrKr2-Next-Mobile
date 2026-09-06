@@ -19,6 +19,7 @@ vcpkg_from_gitlab(
     SHA512 663e6edf2718e8205e30ba309ac609ced9e88e6e1ec857fc48b345dfce82b044d58ec6b4a2d2b281fba30a659a368625ea7501f8b43fe26c137a7ebffdbaac91
     PATCHES
         msvc-convenience.diff
+        0002-android-ctime-r.patch
         ${EXTRA_PATCHES}
 )
 

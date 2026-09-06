@@ -1,0 +1,23 @@
+Android Bionic 的 <time.h> 已提供非 static 的 char *ctime_r(const time_t *, char *)，
+cairo-ps-surface.c 却在未检测到 HAVE_CTIME_R 时 static 声明同签名函数，
+导致编译报：
+  error: static declaration of 'ctime_r' follows non-static declaration
+这里对 Android 跳过自定义 ctime_r 回退实现（Bionic 已内建，直接使用）。
+
+--- a/src/cairo-ps-surface.c
++++ b/src/cairo-ps-surface.c
+@@ -105,7 +105,9 @@
+ #define DEBUG_FALLBACK(s)
+ #endif
+ 
+ #ifndef HAVE_CTIME_R
++#if !defined(__ANDROID__)
+ static char *ctime_r(const time_t *timep, char *buf)
+ {
+     (void)buf;
+     return ctime(timep);
+ }
++#endif
+ #endif
+ 
+ /**
