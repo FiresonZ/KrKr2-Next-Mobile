@@ -214,9 +214,17 @@ void EnsureInternalPluginAnchorsLinked() {
 
 void EnsureRuntimeLoggersInitialized() {
   std::call_once(g_loggers_init_once, []() {
+    // Release 默认 info：避免大量 [debug] 日志（如 storage 路径探测）刷爆日志文件。
+    // Debug 构建保持 verbose，方便开发排查。现场如遇疑难可临时 #define debug。
+#if defined(NDEBUG)
+    spdlog::set_level(spdlog::level::info);
+    // 重要日志即时落盘
+    spdlog::flush_on(spdlog::level::info);
+#else
     spdlog::set_level(spdlog::level::debug);
     // Flush every log message so crash logs are never lost
     spdlog::flush_on(spdlog::level::debug);
+#endif
     auto core_logger = EnsureNamedLogger("core");
     auto tjs2_logger = EnsureNamedLogger("tjs2");
     auto plugin_logger = EnsureNamedLogger("plugin");
@@ -1347,6 +1355,9 @@ engine_result_t engine_tick(engine_handle_t handle, uint32_t delta_ms) {
     //   采样全黑 -> 引擎 blit 到 IOSurface 的链路本身有问题。
     // 频率提到每 5 tick：高密度帧间序列可区分「稳定黑屏」与「单帧瞬时闪黑」，
     // 同时对照 UI_stubs 的 SourceSample(每5帧) 分辨源纹理 vs IOSurface 落地。
+    // 该采样每次 tick 都 glReadPixels + 打一条 info，属诊断探针，仅在
+    // 启用 KRKR_RENDER_PROBE 时才编译/运行（见 docs/dev/rendering-diagnosis.md）。
+#if defined(KRKR_RENDER_PROBE)
     if (impl->tick_count % 5 == 0) {
       auto& iosurf_egl = krkr::GetEngineEGLContext();
       if (iosurf_egl.HasIOSurface()) {
@@ -1381,6 +1392,7 @@ engine_result_t engine_tick(engine_handle_t handle, uint32_t delta_ms) {
         }
       }
     }
+#endif // KRKR_RENDER_PROBE
     glFlush(); // Ensure GPU commands are submitted
     impl->frame.serial += 1;
     impl->frame.ready = true;

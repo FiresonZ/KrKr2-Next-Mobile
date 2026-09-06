@@ -163,8 +163,9 @@ startup.tjs → system/Initialize.tjs → first.ks → title.ks
 走到 title.ks 表示脚本没问题；之后才需要查渲染/插件（如 Z 兼容黑屏）。
 
 ### 3. 用探针
-我们在关键渲染点加了采样探针（`SourceSample/PostBlit/draw/BlackScreen`），专门用来区分
-"引擎没画" vs "画了但没进纹理"。黑屏排错可直接看这些输出。
+我们在关键渲染点**内置了可开关的采样探针**（`SourceSample/PostBlit/draw/BlackScreen`，默认关闭，
+`cmake -DENABLE_RENDER_PROBE=ON` 打开），专门用来区分"引擎没画" vs "画了但没进纹理"。
+黑屏/渲染问题排查请看 [rendering-diagnosis.md](rendering-diagnosis.md)。
 
 ---
 

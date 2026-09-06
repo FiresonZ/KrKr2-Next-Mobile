@@ -24,6 +24,7 @@ Flutter 壳应用提供 UI。当前**面向移动端**（iOS + Android 为主目
 | 文档 | 内容 |
 |------|------|
 | [for-beginners.md](for-beginners.md) | **小白开发指引**：目录用途 / 内置功能 / 上手指南 / 排错 / 教学向（新开发者先读这个） |
+| [rendering-diagnosis.md](rendering-diagnosis.md) | **渲染/黑屏诊断方法（探针）**：怎么开探针、怎么读日志二分定位、日志文件会不会膨胀 |
 | [developers-guide.md](developers-guide.md) | **人类开发者入门**：30 分钟上手，核心概念/目录地图/代码路径/调试 |
 | [tech-stack.md](tech-stack.md) | 技术栈、语言、关键三方库、vcpkg 依赖 |
 | [architecture.md](architecture.md) | 模块架构、渲染数据流、桥接层设计、GPU 管线现状 |

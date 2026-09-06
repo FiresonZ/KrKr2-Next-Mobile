@@ -270,8 +270,15 @@ public:
         // 频率提到每 5 帧，并在同一采样点对源纹理连续读两次（相隔若干 draw 后）
         // 以排除「单帧瞬时闪」；同时打印全局图层对象数 layers，区分
         // 「引擎没建/没东西画」与「画了但没进源纹理」两条线。
+        // 诊断插桩：仅当编译期定义 KRKR_RENDER_PROBE 时运行（每 5 帧读像素+打日志，
+        // 属黑屏/渲染诊断探针）。默认 release 关闭，避免每帧 glReadPixels 与日志刷屏；
+        // 遇到黑屏/渲染问题再打开（见 docs/dev/rendering-diagnosis.md）。
+#if defined(KRKR_RENDER_PROBE)
         static int s_blitDbg = 0;
         const bool kBlitDump = ((s_blitDbg++) % 5) == 1;
+#else
+        const bool kBlitDump = false;
+#endif
         if (kBlitDump) {
             // 引擎本段(自上次 GetRenderStat 清零以来)实际执行的 GL 绘制次数：
             //   draw 持续增长 -> 引擎在合成图层，黑的是「画了但没进 tex4」

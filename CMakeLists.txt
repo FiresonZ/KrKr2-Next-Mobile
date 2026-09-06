@@ -27,6 +27,14 @@ option(ENABLE_TESTS "enable tests execute build(exclude ios/android)" ON)
 option(BUILD_TOOLS "build tools execute build(exclude ios/android)" ON)
 option(BUILD_ENGINE_API "build engine_api bridge library" ON)
 
+# 渲染诊断探针（SourceSample/PostBlit/IOSurfacePixelSample/BlackScreen）编译开关。
+# 默认 OFF：release 不含探针、零性能开销与日志刷屏。黑屏/渲染问题排查时
+# cmake -DENABLE_RENDER_PROBE=ON 开启（见 docs/dev/rendering-diagnosis.md）。
+option(ENABLE_RENDER_PROBE "enable per-frame render diagnostics (black-screen probes)" OFF)
+if(ENABLE_RENDER_PROBE)
+    add_compile_definitions(KRKR_RENDER_PROBE)
+endif()
+
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
