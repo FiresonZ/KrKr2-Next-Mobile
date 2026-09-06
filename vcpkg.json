@@ -55,6 +55,10 @@
     "oniguruma",
     "openal-soft",
     {
+      "name": "oboe",
+      "platform": "android"
+    },
+    {
       "name": "opencv4",
       "default-features": false,
       "features": [
